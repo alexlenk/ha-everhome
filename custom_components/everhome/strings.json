@@ -1,0 +1,33 @@
+{
+  "config": {
+    "step": {
+      "pick_implementation": {
+        "title": "Select Authentication Method",
+        "description": "Select the authentication method to connect to Everhome"
+      },
+      "reauth_confirm": {
+        "title": "Reauthenticate with Everhome",
+        "description": "The Everhome integration needs to re-authenticate your account"
+      }
+    },
+    "abort": {
+      "already_configured": "Everhome account is already configured",
+      "cannot_connect": "Failed to connect to Everhome API",
+      "missing_configuration": "The Everhome component is not configured. Please follow the documentation.",
+      "oauth_error": "Received invalid token data.",
+      "unknown": "Unexpected error occurred",
+      "wrong_account": "User credentials do not match this integration."
+    }
+  },
+  "entity": {
+    "cover": {
+      "everhome": {
+        "state_attributes": {
+          "current_position": {
+            "name": "Current position"
+          }
+        }
+      }
+    }
+  }
+}
