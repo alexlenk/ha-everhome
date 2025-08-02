@@ -3,10 +3,10 @@
   "name": "Everhome",
   "codeowners": ["@alexlenk"],
   "config_flow": true,
+  "dependencies": ["application_credentials"],
   "documentation": "https://github.com/alexlenk/everhome",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/alexlenk/everhome/issues",
   "requirements": [],
-  "version": "0.3.0",
-  "dependencies": ["application_credentials"]
+  "version": "0.3.0"
 }
