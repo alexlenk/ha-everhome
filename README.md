@@ -7,6 +7,14 @@
 
 _Integration to control Everhome shutters, blinds, and awnings in Home Assistant._
 
+## About Everhome and Jarolift
+
+[Everhome](https://everhome.cloud) is a cloud-based smart home platform that supports various device manufacturers and protocols. While Everhome is compatible with multiple device types including shutters, blinds, awnings, lighting, and sensors from different brands, **this integration was specifically developed by the author to control [Jarolift](https://www.jarolift.de/) motorized shutters**.
+
+Jarolift is a German manufacturer specializing in high-quality drive systems for shutters, awnings, and garage doors. Their motors integrate seamlessly with the Everhome platform, providing reliable remote control and automation capabilities.
+
+**Note:** While this integration may work with other Everhome-compatible devices, it has been primarily tested and optimized for Jarolift shutter systems. Users with other device types are welcome to try the integration, but functionality may vary.
+
 **This component will set up the following platforms:**
 
 | Platform | Description |
@@ -18,7 +26,9 @@ _Integration to control Everhome shutters, blinds, and awnings in Home Assistant
 - **OAuth2 Authentication** - Secure connection to Everhome cloud
 - **Real-time Control** - Open, close, and stop shutter operations
 - **State Detection** - Intelligent state management with API limitations handling
+- **Jarolift Motor Support** - Optimized for Jarolift shutter drive systems
 - **Multiple Device Types** - Support for shutters, blinds, awnings, and curtains
+- **Always-Available Controls** - All buttons remain active regardless of state
 - **Position Feedback** - Position reporting when available from devices
 - **Reliable Operation** - Graceful handling of local remote usage and API outages
 
@@ -58,10 +68,23 @@ _Integration to control Everhome shutters, blinds, and awnings in Home Assistant
 ### Supported Devices
 
 The integration automatically discovers and configures:
-- **Shutters** - Motorized window shutters
+- **Shutters** - Motorized window shutters (tested with Jarolift motors)
 - **Blinds** - Motorized window blinds  
-- **Awnings** - Outdoor shade awnings
+- **Awnings** - Outdoor shade awnings (tested with Jarolift systems)
 - **Curtains** - Motorized curtain systems
+
+#### Jarolift Motor Compatibility
+
+This integration has been specifically tested and optimized for:
+- **Jarolift TDEF series** - Tubular motors for shutters and awnings
+- **Jarolift Smart motors** - WiFi-enabled drive systems
+- **Jarolift radio motors** - 433 MHz controlled systems via Everhome gateway
+
+**Jarolift Features Supported:**
+- Manual remote control detection and state synchronization
+- Motor limit position handling
+- Emergency stop functionality
+- Integration with Jarolift's proprietary rolling code technology
 
 ### Device Features
 
