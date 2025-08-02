@@ -100,20 +100,32 @@ class EverhomeCover(CoordinatorEntity, CoverEntity):
     @property
     def is_closed(self) -> bool | None:
         """Return if the cover is closed."""
-        state = self.device_data.get("state")
+        device_data = self.device_data
+        state = device_data.get("state")
+        position = device_data.get("position")
+        
+        # Debug logging to understand actual API data
+        _LOGGER.debug(
+            "Device %s state detection - Full data: %s, State: %s, Position: %s",
+            self._device_id, device_data, state, position
+        )
         
         # Prioritize explicit API state
         if state == STATE_CLOSED:
+            _LOGGER.debug("Device %s: Using explicit CLOSED state", self._device_id)
             return True
         elif state in [STATE_OPEN, STATE_OPENING, STATE_CLOSING]:
+            _LOGGER.debug("Device %s: Using explicit state %s -> False", self._device_id, state)
             return False
             
         # Fallback to position if no explicit state
-        position = self.device_data.get("position")
         if position is not None:
-            return int(position) <= 5
+            is_closed = int(position) <= 5
+            _LOGGER.debug("Device %s: Using position %s -> is_closed=%s", self._device_id, position, is_closed)
+            return is_closed
             
         # No reliable data available
+        _LOGGER.warning("Device %s: No reliable state data - returning None (Unknown state)", self._device_id)
         return None
         
     @property
@@ -131,20 +143,26 @@ class EverhomeCover(CoordinatorEntity, CoverEntity):
     @property
     def is_open(self) -> bool | None:
         """Return if the cover is open."""
-        state = self.device_data.get("state")
+        device_data = self.device_data
+        state = device_data.get("state")
+        position = device_data.get("position")
         
         # Prioritize explicit API state
         if state == STATE_OPEN:
+            _LOGGER.debug("Device %s: Using explicit OPEN state", self._device_id)
             return True
         elif state in [STATE_CLOSED, STATE_OPENING, STATE_CLOSING]:
+            _LOGGER.debug("Device %s: Using explicit state %s -> False", self._device_id, state)
             return False
             
         # Fallback to position if no explicit state
-        position = self.device_data.get("position")
         if position is not None:
-            return int(position) >= 95
+            is_open = int(position) >= 95
+            _LOGGER.debug("Device %s: Using position %s -> is_open=%s", self._device_id, position, is_open)
+            return is_open
             
         # No reliable data available
+        _LOGGER.debug("Device %s: No reliable state data for is_open - returning None", self._device_id)
         return None
 
     @property

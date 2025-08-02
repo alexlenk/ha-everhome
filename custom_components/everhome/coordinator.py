@@ -66,12 +66,17 @@ class EverhomeDataUpdateCoordinator(DataUpdateCoordinator):
             
             devices = await resp.json()
             
+            # Debug: Log raw API response
+            _LOGGER.debug("Raw API response: %s", devices)
+            
             # Filter for shutter devices
             shutter_devices = {}
             for device in devices:
                 if device.get("subtype") in ["shutter", "blind", "awning", "curtain"]:
                     shutter_devices[device["id"]] = device
+                    _LOGGER.debug("Added shutter device: %s -> %s", device["id"], device)
             
+            _LOGGER.debug("Final shutter_devices data: %s", shutter_devices)
             return shutter_devices
 
     async def execute_device_action(self, device_id, action):
