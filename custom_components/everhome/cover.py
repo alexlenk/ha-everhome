@@ -106,28 +106,18 @@ class EverhomeCover(CoordinatorEntity, CoverEntity):
         general_state = device_data.get("states", {}).get("general")
         position = device_data.get("position")
         
-        # Debug logging to understand actual API data
-        _LOGGER.warning(
-            "DEBUG: Device %s state detection - Full data: %s, General state: %s, Position: %s",
-            self._device_id, device_data, general_state, position
-        )
-        
         # Use actual API state format: "down" = closed, "up" = open
         if general_state == "down":
-            _LOGGER.debug("Device %s: Using explicit DOWN state -> closed", self._device_id)
             return True
         elif general_state == "up":
-            _LOGGER.debug("Device %s: Using explicit UP state -> open", self._device_id)
             return False
             
         # Fallback to position if no explicit state
         if position is not None:
-            is_closed = int(position) <= 5
-            _LOGGER.debug("Device %s: Using position %s -> is_closed=%s", self._device_id, position, is_closed)
-            return is_closed
+            return int(position) <= 5
             
-        # No reliable data available
-        _LOGGER.warning("Device %s: No reliable state data - returning None (Unknown state)", self._device_id)
+        # Return None to keep all buttons active when state unknown
+        # This ensures open, close, and stop are always available
         return None
         
     @property
@@ -153,20 +143,16 @@ class EverhomeCover(CoordinatorEntity, CoverEntity):
         
         # Use actual API state format: "up" = open, "down" = closed
         if general_state == "up":
-            _LOGGER.debug("Device %s: Using explicit UP state -> open", self._device_id)
             return True
         elif general_state == "down":
-            _LOGGER.debug("Device %s: Using explicit DOWN state -> closed", self._device_id)
             return False
             
         # Fallback to position if no explicit state
         if position is not None:
-            is_open = int(position) >= 95
-            _LOGGER.debug("Device %s: Using position %s -> is_open=%s", self._device_id, position, is_open)
-            return is_open
+            return int(position) >= 95
             
-        # No reliable data available
-        _LOGGER.debug("Device %s: No reliable state data for is_open - returning None", self._device_id)
+        # Return None to keep all buttons active when state unknown
+        # This ensures open, close, and stop are always available
         return None
 
     @property
