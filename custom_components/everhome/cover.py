@@ -105,8 +105,8 @@ class EverhomeCover(CoordinatorEntity, CoverEntity):
         position = device_data.get("position")
         
         # Debug logging to understand actual API data
-        _LOGGER.debug(
-            "Device %s state detection - Full data: %s, State: %s, Position: %s",
+        _LOGGER.warning(
+            "DEBUG: Device %s state detection - Full data: %s, State: %s, Position: %s",
             self._device_id, device_data, state, position
         )
         
