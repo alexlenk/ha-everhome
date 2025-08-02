@@ -98,10 +98,22 @@ class EverhomeCover(CoordinatorEntity, CoverEntity):
         return self._device_id in self.coordinator.data
 
     @property
-    def is_closed(self) -> bool:
+    def is_closed(self) -> bool | None:
         """Return if the cover is closed."""
-        # Since we can't reliably know the state, return None
-        # This makes Home Assistant enable both open and close buttons
+        state = self.device_data.get("state")
+        
+        # Prioritize explicit API state
+        if state == STATE_CLOSED:
+            return True
+        elif state in [STATE_OPEN, STATE_OPENING, STATE_CLOSING]:
+            return False
+            
+        # Fallback to position if no explicit state
+        position = self.device_data.get("position")
+        if position is not None:
+            return int(position) <= 5
+            
+        # No reliable data available
         return None
         
     @property
@@ -117,10 +129,22 @@ class EverhomeCover(CoordinatorEntity, CoverEntity):
         return state == STATE_CLOSING
         
     @property
-    def is_open(self) -> bool:
+    def is_open(self) -> bool | None:
         """Return if the cover is open."""
-        # Since we can't reliably know the state, return None
-        # This makes Home Assistant enable both open and close buttons
+        state = self.device_data.get("state")
+        
+        # Prioritize explicit API state
+        if state == STATE_OPEN:
+            return True
+        elif state in [STATE_CLOSED, STATE_OPENING, STATE_CLOSING]:
+            return False
+            
+        # Fallback to position if no explicit state
+        position = self.device_data.get("position")
+        if position is not None:
+            return int(position) >= 95
+            
+        # No reliable data available
         return None
 
     @property
@@ -128,11 +152,19 @@ class EverhomeCover(CoordinatorEntity, CoverEntity):
         """Return current position of cover."""
         position = self.device_data.get("position")
         if position is not None:
-            # Convert to 0-100 scale if needed
-            return int(position)
-        # If no position is available, use a default value
-        # that will keep both buttons enabled
-        return 50
+            # Ensure position is within 0-100 range
+            return max(0, min(100, int(position)))
+            
+        # If no position available, infer from state
+        state = self.device_data.get("state")
+        if state == STATE_CLOSED:
+            return 0
+        elif state == STATE_OPEN:
+            return 100
+            
+        # Return None if no reliable position data
+        # This will hide the position slider in HA UI
+        return None
 
     async def async_open_cover(self, **kwargs: Any) -> None:
         """Open the cover."""
