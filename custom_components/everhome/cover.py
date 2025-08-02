@@ -101,21 +101,23 @@ class EverhomeCover(CoordinatorEntity, CoverEntity):
     def is_closed(self) -> bool | None:
         """Return if the cover is closed."""
         device_data = self.device_data
-        state = device_data.get("state")
+        
+        # API uses states.general with "up"/"down" values
+        general_state = device_data.get("states", {}).get("general")
         position = device_data.get("position")
         
         # Debug logging to understand actual API data
         _LOGGER.warning(
-            "DEBUG: Device %s state detection - Full data: %s, State: %s, Position: %s",
-            self._device_id, device_data, state, position
+            "DEBUG: Device %s state detection - Full data: %s, General state: %s, Position: %s",
+            self._device_id, device_data, general_state, position
         )
         
-        # Prioritize explicit API state
-        if state == STATE_CLOSED:
-            _LOGGER.debug("Device %s: Using explicit CLOSED state", self._device_id)
+        # Use actual API state format: "down" = closed, "up" = open
+        if general_state == "down":
+            _LOGGER.debug("Device %s: Using explicit DOWN state -> closed", self._device_id)
             return True
-        elif state in [STATE_OPEN, STATE_OPENING, STATE_CLOSING]:
-            _LOGGER.debug("Device %s: Using explicit state %s -> False", self._device_id, state)
+        elif general_state == "up":
+            _LOGGER.debug("Device %s: Using explicit UP state -> open", self._device_id)
             return False
             
         # Fallback to position if no explicit state
@@ -144,15 +146,17 @@ class EverhomeCover(CoordinatorEntity, CoverEntity):
     def is_open(self) -> bool | None:
         """Return if the cover is open."""
         device_data = self.device_data
-        state = device_data.get("state")
+        
+        # API uses states.general with "up"/"down" values
+        general_state = device_data.get("states", {}).get("general")
         position = device_data.get("position")
         
-        # Prioritize explicit API state
-        if state == STATE_OPEN:
-            _LOGGER.debug("Device %s: Using explicit OPEN state", self._device_id)
+        # Use actual API state format: "up" = open, "down" = closed
+        if general_state == "up":
+            _LOGGER.debug("Device %s: Using explicit UP state -> open", self._device_id)
             return True
-        elif state in [STATE_CLOSED, STATE_OPENING, STATE_CLOSING]:
-            _LOGGER.debug("Device %s: Using explicit state %s -> False", self._device_id, state)
+        elif general_state == "down":
+            _LOGGER.debug("Device %s: Using explicit DOWN state -> closed", self._device_id)
             return False
             
         # Fallback to position if no explicit state
@@ -173,12 +177,12 @@ class EverhomeCover(CoordinatorEntity, CoverEntity):
             # Ensure position is within 0-100 range
             return max(0, min(100, int(position)))
             
-        # If no position available, infer from state
-        state = self.device_data.get("state")
-        if state == STATE_CLOSED:
-            return 0
-        elif state == STATE_OPEN:
-            return 100
+        # If no position available, infer from general state
+        general_state = self.device_data.get("states", {}).get("general")
+        if general_state == "down":
+            return 0  # Closed
+        elif general_state == "up":
+            return 100  # Open
             
         # Return None if no reliable position data
         # This will hide the position slider in HA UI
