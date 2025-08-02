@@ -5,29 +5,40 @@
 [![License][license-shield]](LICENSE)
 [![hacs][hacsbadge]][hacs]
 
-_Integration to control Everhome shutters, blinds, and awnings in Home Assistant._
+_Integration to control Everhome shutter-type devices in Home Assistant._
 
-## About Everhome and Jarolift
+## About Everhome
 
-[Everhome](https://everhome.cloud) is a cloud-based smart home platform that supports various device manufacturers and protocols. While Everhome is compatible with multiple device types including shutters, blinds, awnings, lighting, and sensors from different brands, **this integration was specifically developed by the author to control [Jarolift](https://www.jarolift.de/) motorized shutters**.
+[Everhome](https://everhome.cloud) is a cloud-based smart home platform that supports various device manufacturers and protocols. While Everhome is compatible with multiple device types including lighting, sensors, and other smart home products, **this integration focuses specifically on shutter-type devices** such as shutters, blinds, awnings, and curtains.
 
-Jarolift is a German manufacturer specializing in high-quality drive systems for shutters, awnings, and garage doors. Their motors integrate seamlessly with the Everhome platform, providing reliable remote control and automation capabilities.
+## Supported Device Categories
 
-**Note:** While this integration may work with other Everhome-compatible devices, it has been primarily tested and optimized for Jarolift shutter systems. Users with other device types are welcome to try the integration, but functionality may vary.
+This integration supports all shutter-type devices connected to the Everhome platform, including:
+
+- **Shutters** - Motorized window shutters from various manufacturers
+- **Blinds** - Motorized window blinds and venetian blinds  
+- **Awnings** - Outdoor shade awnings and retractable canopies
+- **Curtains** - Motorized curtain and drape systems
+
+### Tested Brands and Motors
+
+The integration has been tested and verified with:
+- **[Jarolift](https://www.jarolift.de/)** - German manufacturer of tubular motors and drive systems
+- **Other Everhome-compatible** shutter motor brands
 
 **This component will set up the following platforms:**
 
 | Platform | Description |
 | -------- | ----------- |
-| `cover`  | Control shutters, blinds, awnings, and curtains |
+| `cover`  | Control shutters, blinds, awnings, curtains, and garage doors |
 
 ## Features
 
 - **OAuth2 Authentication** - Secure connection to Everhome cloud
 - **Real-time Control** - Open, close, and stop shutter operations
 - **State Detection** - Intelligent state management with API limitations handling
-- **Jarolift Motor Support** - Optimized for Jarolift shutter drive systems
-- **Multiple Device Types** - Support for shutters, blinds, awnings, and curtains
+- **Universal Shutter Support** - Compatible with all Everhome shutter-type devices
+- **Multiple Device Categories** - Support for shutters, blinds, awnings, and curtains
 - **Always-Available Controls** - All buttons remain active regardless of state
 - **Position Feedback** - Position reporting when available from devices
 - **Reliable Operation** - Graceful handling of local remote usage and API outages
@@ -67,24 +78,24 @@ Jarolift is a German manufacturer specializing in high-quality drive systems for
 
 ### Supported Devices
 
-The integration automatically discovers and configures:
-- **Shutters** - Motorized window shutters (tested with Jarolift motors)
-- **Blinds** - Motorized window blinds  
-- **Awnings** - Outdoor shade awnings (tested with Jarolift systems)
-- **Curtains** - Motorized curtain systems
+The integration automatically discovers and configures all shutter-type devices:
+- **Shutters** - Motorized window shutters from any compatible manufacturer
+- **Blinds** - Motorized window blinds and venetian blind systems  
+- **Awnings** - Outdoor shade awnings and retractable canopy systems
+- **Curtains** - Motorized curtain and drape systems
+- **Garage Doors** - Motorized garage door systems
 
-#### Jarolift Motor Compatibility
+#### Manufacturer Compatibility
 
-This integration has been specifically tested and optimized for:
-- **Jarolift TDEF series** - Tubular motors for shutters and awnings
-- **Jarolift Smart motors** - WiFi-enabled drive systems
-- **Jarolift radio motors** - 433 MHz controlled systems via Everhome gateway
+This integration works with shutter-type devices from various manufacturers connected to Everhome, including:
+- **Jarolift** - TDEF series tubular motors, Smart WiFi motors, and 433 MHz radio systems
+- **Other brands** - Any shutter motor system compatible with the Everhome platform
 
-**Jarolift Features Supported:**
+**Universal Shutter Features Supported:**
 - Manual remote control detection and state synchronization
-- Motor limit position handling
-- Emergency stop functionality
-- Integration with Jarolift's proprietary rolling code technology
+- Motor limit position handling for all compatible systems
+- Emergency stop functionality across all device types
+- Integration with manufacturer-specific protocols via Everhome
 
 ### Device Features
 
@@ -194,16 +205,17 @@ Contributions are welcome! Please read the [contributing guidelines](CONTRIBUTIN
 ## Roadmap
 
 ### Planned Features
-- **Enhanced Testing Framework** - Comprehensive test coverage
-- **CI/CD Pipeline** - Automated testing and releases
-- **Additional Device Types** - Support for more Everhome products
-- **Scene Integration** - Predefined position scenes
+- **Enhanced Testing Framework** - Comprehensive test coverage across device types
+- **CI/CD Pipeline** - Automated testing and releases ✅ (Completed)
+- **Additional Shutter Features** - Advanced positioning and scene integration
+- **Group Control** - Synchronized operation of multiple shutter devices
 - **Advanced Diagnostics** - Better error reporting and device health monitoring
 
 ### Future Considerations
+- **Additional Device Types** - Support for other Everhome products (lights, sensors, etc.)
 - **Local API Support** - If Everhome provides local connectivity options
-- **Battery Monitoring** - For battery-powered devices
-- **Group Control** - Synchronized operation of multiple devices
+- **Battery Monitoring** - For battery-powered shutter systems
+- **Scene Integration** - Predefined position scenes for different times of day
 
 ## Credits
 

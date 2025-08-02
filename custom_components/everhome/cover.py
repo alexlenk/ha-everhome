@@ -65,7 +65,16 @@ class EverhomeCover(CoordinatorEntity, CoverEntity):
         # Include the entry_id in the unique_id to support multiple accounts
         entry_id = coordinator.entry.entry_id
         self._attr_unique_id = f"{DOMAIN}_{entry_id}_{device_id}"
-        self._attr_device_class = CoverDeviceClass.SHUTTER
+        # Set appropriate device class based on subtype
+        subtype = device_data.get("subtype", "shutter")
+        if subtype == "garage_door":
+            self._attr_device_class = CoverDeviceClass.GARAGE
+        elif subtype in ["blind", "curtain"]:
+            self._attr_device_class = CoverDeviceClass.BLIND
+        elif subtype == "awning":
+            self._attr_device_class = CoverDeviceClass.AWNING
+        else:
+            self._attr_device_class = CoverDeviceClass.SHUTTER
         self._attr_supported_features = (
             CoverEntityFeature.OPEN
             | CoverEntityFeature.CLOSE
@@ -80,12 +89,21 @@ class EverhomeCover(CoordinatorEntity, CoverEntity):
             identifiers={(DOMAIN, device_id)},
             name=self._attr_name,
             manufacturer="Everhome",
-            model=device_data.get("model", "Shutter"),
+            model=device_data.get("model", subtype.replace("_", " ").title()),
             sw_version=device_data.get("firmware_version", "Unknown"),
         )
         
-        # Set entity icon
-        self._attr_icon = "mdi:window-shutter"
+        # Set appropriate icon based on device type
+        if subtype == "garage_door":
+            self._attr_icon = "mdi:garage"
+        elif subtype == "blind":
+            self._attr_icon = "mdi:blinds"
+        elif subtype == "curtain":
+            self._attr_icon = "mdi:curtains"
+        elif subtype == "awning":
+            self._attr_icon = "mdi:awning-outline"
+        else:
+            self._attr_icon = "mdi:window-shutter"
 
     @property
     def device_data(self) -> dict:

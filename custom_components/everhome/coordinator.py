@@ -66,10 +66,10 @@ class EverhomeDataUpdateCoordinator(DataUpdateCoordinator):
             
             devices = await resp.json()
             
-            # Filter for shutter devices
+            # Filter for shutter-type devices
             shutter_devices = {}
             for device in devices:
-                if device.get("subtype") in ["shutter", "blind", "awning", "curtain"]:
+                if device.get("subtype") in ["shutter", "blind", "awning", "curtain", "garage_door"]:
                     shutter_devices[device["id"]] = device
             
             return shutter_devices
