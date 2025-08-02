@@ -98,6 +98,11 @@ class EverhomeCover(CoordinatorEntity, CoverEntity):
         return self._device_id in self.coordinator.data
 
     @property
+    def assumed_state(self) -> bool:
+        """Return True to keep all buttons available regardless of state."""
+        return True
+
+    @property
     def is_closed(self) -> bool | None:
         """Return if the cover is closed."""
         device_data = self.device_data
