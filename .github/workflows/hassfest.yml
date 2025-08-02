@@ -1,0 +1,24 @@
+name: Hassfest Validation
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    - cron: "0 2 * * *"  # Daily at 2 AM UTC
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    name: Check with Hassfest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Hassfest validation
+        uses: home-assistant/actions/hassfest@master
+        with:
+          path: "./custom_components"

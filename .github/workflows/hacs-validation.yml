@@ -1,0 +1,25 @@
+name: HACS Validation
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  schedule:
+    - cron: "0 2 * * *"  # Daily at 2 AM UTC
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    name: Validate with HACS
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run HACS Action
+        uses: hacs/action@main
+        with:
+          category: integration
+          ignore: brands
