@@ -1,4 +1,5 @@
 """Support for Everhome covers."""
+
 from __future__ import annotations
 
 import logging
@@ -17,14 +18,14 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
-    DOMAIN,
-    ACTION_OPEN,
     ACTION_CLOSE,
+    ACTION_OPEN,
     ACTION_STOP,
-    STATE_OPEN,
+    DOMAIN,
     STATE_CLOSED,
-    STATE_OPENING,
     STATE_CLOSING,
+    STATE_OPEN,
+    STATE_OPENING,
 )
 from .coordinator import EverhomeDataUpdateCoordinator
 
@@ -76,9 +77,7 @@ class EverhomeCover(CoordinatorEntity, CoverEntity):
         else:
             self._attr_device_class = CoverDeviceClass.SHUTTER
         self._attr_supported_features = (
-            CoverEntityFeature.OPEN
-            | CoverEntityFeature.CLOSE
-            | CoverEntityFeature.STOP
+            CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE | CoverEntityFeature.STOP
         )
 
         # Add position support if available in the device data
@@ -92,7 +91,7 @@ class EverhomeCover(CoordinatorEntity, CoverEntity):
             model=device_data.get("model", subtype.replace("_", " ").title()),
             sw_version=device_data.get("firmware_version", "Unknown"),
         )
-        
+
         # Set appropriate icon based on device type
         if subtype == "garage_door":
             self._attr_icon = "mdi:garage"
@@ -109,7 +108,7 @@ class EverhomeCover(CoordinatorEntity, CoverEntity):
     def device_data(self) -> dict:
         """Return the device data."""
         return self.coordinator.data.get(self._device_id, {})
-        
+
     @property
     def available(self) -> bool:
         """Return True if entity is available."""
@@ -124,25 +123,25 @@ class EverhomeCover(CoordinatorEntity, CoverEntity):
     def is_closed(self) -> bool | None:
         """Return if the cover is closed."""
         device_data = self.device_data
-        
+
         # API uses states.general with "up"/"down" values
         general_state = device_data.get("states", {}).get("general")
         position = device_data.get("position")
-        
+
         # Use actual API state format: "down" = closed, "up" = open
         if general_state == "down":
             return True
         elif general_state == "up":
             return False
-            
+
         # Fallback to position if no explicit state
         if position is not None:
             return int(position) <= 5
-            
+
         # Return None to keep all buttons active when state unknown
         # This ensures open, close, and stop are always available
         return None
-        
+
     @property
     def is_opening(self) -> bool:
         """Return if the cover is opening."""
@@ -154,26 +153,26 @@ class EverhomeCover(CoordinatorEntity, CoverEntity):
         """Return if the cover is closing."""
         state = self.device_data.get("state")
         return state == STATE_CLOSING
-        
+
     @property
     def is_open(self) -> bool | None:
         """Return if the cover is open."""
         device_data = self.device_data
-        
+
         # API uses states.general with "up"/"down" values
         general_state = device_data.get("states", {}).get("general")
         position = device_data.get("position")
-        
+
         # Use actual API state format: "up" = open, "down" = closed
         if general_state == "up":
             return True
         elif general_state == "down":
             return False
-            
+
         # Fallback to position if no explicit state
         if position is not None:
             return int(position) >= 95
-            
+
         # Return None to keep all buttons active when state unknown
         # This ensures open, close, and stop are always available
         return None
@@ -185,14 +184,14 @@ class EverhomeCover(CoordinatorEntity, CoverEntity):
         if position is not None:
             # Ensure position is within 0-100 range
             return max(0, min(100, int(position)))
-            
+
         # If no position available, infer from general state
         general_state = self.device_data.get("states", {}).get("general")
         if general_state == "down":
             return 0  # Closed
         elif general_state == "up":
             return 100  # Open
-            
+
         # Return None if no reliable position data
         # This will hide the position slider in HA UI
         return None
@@ -227,5 +226,5 @@ class EverhomeCover(CoordinatorEntity, CoverEntity):
                     await self.async_open_cover()
                 else:
                     await self.async_close_cover()
-            
+
             await self.coordinator.async_request_refresh()

@@ -5,14 +5,13 @@ from typing import Any, Dict, Optional
 
 import aiohttp
 import voluptuous as vol
-
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers import config_entry_oauth2_flow
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
-from .const import DOMAIN, API_BASE_URL
+from .const import API_BASE_URL, DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -24,7 +23,7 @@ class EverhomeFlowHandler(
 
     DOMAIN = DOMAIN
     VERSION = 1
-    
+
     # Allow multiple config entries
     _async_get_entry_with_matching_unique_id = None
 
@@ -52,18 +51,18 @@ class EverhomeFlowHandler(
         """Create an entry for the OAuth2 config flow."""
         session = async_get_clientsession(self.hass)
         access_token = data["token"]["access_token"]
-        
+
         try:
             headers = {"Authorization": f"Bearer {access_token}"}
             async with session.get(f"{API_BASE_URL}/device", headers=headers) as resp:
                 if resp.status != 200:
                     return self.async_abort(reason="cannot_connect")
                 devices = await resp.json()
-            
+
             # Use the name from the OAuth application for the config entry title
             # This allows users to distinguish between multiple accounts
             name = data.get("name", "Everhome")
-            
+
             return self.async_create_entry(
                 title=f"{name} ({len(devices)} devices)",
                 data=data,
