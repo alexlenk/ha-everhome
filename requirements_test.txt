@@ -13,9 +13,9 @@ isort>=5.12.0
 # Home Assistant testing - use earlier version to avoid Python 3.12 syntax issues
 homeassistant==2023.1.7
 
-# Runtime dependencies (for testing)
-aiohttp>=3.8.0
-voluptuous>=0.13.0
+# Runtime dependencies (for testing) - pin to versions with good wheel support
+aiohttp==3.8.6
+voluptuous==0.13.1
 
 # Additional testing tools
 aioresponses>=0.7.4
