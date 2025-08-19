@@ -37,4 +37,10 @@ wheels/
 .Spotlight-V100
 .Trashes
 ehthumbs.db
-Thumbs.db
+Thumbs.dbdefault/
+venv/
+.coverage
+coverage.xml
+htmlcov/
+.pytest_cache/
+__pycache__/
