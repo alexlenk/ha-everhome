@@ -1,7 +1,7 @@
 # Test requirements for Everhome integration
-pytest==7.2.0
-pytest-cov==3.0.0
-pytest-asyncio==0.20.2
+pytest>=7.4.0
+pytest-cov>=4.0.0
+pytest-asyncio>=0.21.0
 pytest-homeassistant-custom-component==0.12.49
 
 # Code quality
@@ -10,8 +10,8 @@ flake8>=6.0.0
 mypy>=1.0.0
 isort>=5.12.0
 
-# Home Assistant testing - use earlier version to avoid Python 3.12 syntax issues
-homeassistant==2023.1.7
+# Home Assistant testing - use 2023 stable version compatible with Python 3.9+
+homeassistant==2023.12.4
 
 # Runtime dependencies (for testing) - let Home Assistant manage aiohttp version
 voluptuous==0.13.1
