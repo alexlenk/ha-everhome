@@ -1,8 +1,8 @@
-# Test requirements for Everhome integration - pin to working versions
-pytest==7.2.0
-pytest-cov==3.0.0
-pytest-asyncio==0.20.2
-pytest-homeassistant-custom-component==0.12.49
+# Test requirements for Everhome integration - match ecowitt_local versions
+pytest>=7.0.0
+pytest-cov>=4.0.0
+pytest-asyncio>=0.21.0
+pytest-homeassistant-custom-component>=0.13.0
 
 # Code quality
 black>=23.0.0
@@ -10,11 +10,12 @@ flake8>=6.0.0
 mypy>=1.0.0
 isort>=5.12.0
 
-# Home Assistant testing - exact version required by pytest-homeassistant-custom-component 0.12.49
-homeassistant==2023.1.7
+# Home Assistant testing - use version range like ecowitt_local
+homeassistant>=2023.8.0,<2024.6.0
 
-# Runtime dependencies (for testing) - let Home Assistant manage aiohttp version
-voluptuous==0.13.1
+# Runtime dependencies (for testing)
+aiohttp>=3.8.0
+voluptuous>=0.13.0
 
 # Additional testing tools
 aioresponses>=0.7.4
