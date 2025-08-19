@@ -4,6 +4,8 @@
 [![GitHub Activity][commits-shield]][commits]
 [![License][license-shield]](LICENSE)
 [![hacs][hacsbadge]][hacs]
+[![Test][test-shield]][test]
+[![codecov][codecov-shield]][codecov]
 
 _Integration to control Everhome shutter-type devices in Home Assistant._
 
@@ -234,3 +236,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 [hacs]: https://github.com/hacs/integration
 [hacsbadge]: https://img.shields.io/badge/HACS-Custom-orange.svg?style=for-the-badge
 [license-shield]: https://img.shields.io/github/license/alexlenk/ha-everhome.svg?style=for-the-badge
+[test-shield]: https://img.shields.io/github/actions/workflow/status/alexlenk/ha-everhome/test.yml?style=for-the-badge&label=Tests
+[test]: https://github.com/alexlenk/ha-everhome/actions/workflows/test.yml
+[codecov-shield]: https://img.shields.io/codecov/c/github/alexlenk/ha-everhome?style=for-the-badge
+[codecov]: https://codecov.io/gh/alexlenk/ha-everhome
