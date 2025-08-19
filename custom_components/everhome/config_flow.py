@@ -1,7 +1,7 @@
 """Config flow for Everhome integration."""
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import aiohttp
 import voluptuous as vol
@@ -16,9 +16,10 @@ from .const import API_BASE_URL, DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 
-class EverhomeFlowHandler(
-    config_entry_oauth2_flow.AbstractOAuth2FlowHandler, domain=DOMAIN
-):
+class EverhomeFlowHandler(config_entry_oauth2_flow.AbstractOAuth2FlowHandler):
+    """Config flow to handle Everhome OAuth2 authentication."""
+    
+    DOMAIN = DOMAIN
     """Config flow to handle Everhome OAuth2 authentication."""
 
     DOMAIN = DOMAIN
@@ -32,12 +33,12 @@ class EverhomeFlowHandler(
         """Return logger."""
         return logging.getLogger(__name__)
 
-    async def async_step_reauth(self, entry_data: Dict[str, Any]) -> FlowResult:
+    async def async_step_reauth(self, entry_data: dict[str, Any]) -> FlowResult:
         """Perform reauth upon an API authentication error."""
         return await self.async_step_reauth_confirm()
 
     async def async_step_reauth_confirm(
-        self, user_input: Optional[Dict[str, Any]] = None
+        self, user_input: Optional[dict[str, Any]] = None
     ) -> FlowResult:
         """Dialog that informs the user that reauth is required."""
         if user_input is None:
@@ -47,7 +48,7 @@ class EverhomeFlowHandler(
             )
         return await self.async_step_user()
 
-    async def async_oauth_create_entry(self, data: Dict) -> FlowResult:
+    async def async_oauth_create_entry(self, data: dict[str, Any]) -> FlowResult:
         """Create an entry for the OAuth2 config flow."""
         session = async_get_clientsession(self.hass)
         access_token = data["token"]["access_token"]

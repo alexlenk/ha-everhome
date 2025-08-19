@@ -3,6 +3,7 @@
 import asyncio
 import logging
 from datetime import datetime, timedelta
+from typing import Any, Optional
 
 import aiohttp
 from aiohttp.client_exceptions import ClientError
@@ -33,7 +34,7 @@ class EverhomeDataUpdateCoordinator(DataUpdateCoordinator):
         self.auth = auth
         self.hass = hass
         self.entry = entry
-        self._devices = {}
+        self._devices: dict[str, Any] = {}
 
         super().__init__(
             hass,
@@ -42,7 +43,7 @@ class EverhomeDataUpdateCoordinator(DataUpdateCoordinator):
             update_interval=timedelta(seconds=UPDATE_INTERVAL),
         )
 
-    async def _async_update_data(self):
+    async def _async_update_data(self) -> dict[str, Any]:
         """Update data via API."""
         try:
             # Get all devices
@@ -52,7 +53,7 @@ class EverhomeDataUpdateCoordinator(DataUpdateCoordinator):
         except (ClientError, asyncio.TimeoutError) as err:
             raise UpdateFailed(f"Error communicating with API: {err}") from err
 
-    async def _get_devices(self):
+    async def _get_devices(self) -> dict[str, Any]:
         """Get all devices from the API."""
         access_token = await self.auth.async_get_access_token()
         headers = {"Authorization": f"Bearer {access_token}"}
@@ -80,7 +81,7 @@ class EverhomeDataUpdateCoordinator(DataUpdateCoordinator):
 
             return shutter_devices
 
-    async def execute_device_action(self, device_id, action):
+    async def execute_device_action(self, device_id: str, action: str, params: Optional[dict[str, Any]] = None) -> bool:
         """Execute an action on a device."""
         access_token = await self.auth.async_get_access_token()
         headers = {
@@ -90,6 +91,8 @@ class EverhomeDataUpdateCoordinator(DataUpdateCoordinator):
 
         url = f"{API_BASE_URL}{API_DEVICE_EXECUTE_URL.format(device_id=device_id)}"
         data = {"action": action}
+        if params:
+            data.update(params)
 
         try:
             async with self.auth.aiohttp_session.post(

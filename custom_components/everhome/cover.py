@@ -57,7 +57,7 @@ class EverhomeCover(CoordinatorEntity, CoverEntity):
         self,
         coordinator: EverhomeDataUpdateCoordinator,
         device_id: str,
-        device_data: dict,
+        device_data: dict[str, Any],
     ) -> None:
         """Initialize the cover."""
         super().__init__(coordinator)
@@ -105,9 +105,10 @@ class EverhomeCover(CoordinatorEntity, CoverEntity):
             self._attr_icon = "mdi:window-shutter"
 
     @property
-    def device_data(self) -> dict:
+    def device_data(self) -> dict[str, Any]:
         """Return the device data."""
-        return self.coordinator.data.get(self._device_id, {})
+        device_data = self.coordinator.data.get(self._device_id, {})
+        return device_data  # type: ignore[no-any-return]
 
     @property
     def available(self) -> bool:
