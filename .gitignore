@@ -1,6 +1,3 @@
-# Working directories
-icons/
-
 # Python
 __pycache__/
 *.py[cod]
@@ -22,25 +19,88 @@ wheels/
 *.egg-info/
 .installed.cfg
 *.egg
+MANIFEST
 
-# IDEs
+# Testing
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.tox/
+.nox/
+.cache
+nosetests.xml
+coverage/
+
+# Virtual environments
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# IDEs and editors
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+*.sublime-project
+*.sublime-workspace
 
-# OS
+# OS generated files
 .DS_Store
 .DS_Store?
 ._*
 .Spotlight-V100
 .Trashes
 ehthumbs.db
-Thumbs.dbdefault/
-venv/
-.coverage
-coverage.xml
-htmlcov/
-.pytest_cache/
-__pycache__/
+Thumbs.db
+
+# Home Assistant specific
+default/
+custom_components/.mypy_cache/
+custom_components/__pycache__/
+tests/__pycache__/
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+.tmp/
+temp/
+
+# Configuration files (with sensitive data)
+secrets.yaml
+known_devices.yaml
+*.db
+*.db-journal
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Local development
+.env
+.env.local
+.env.*.local
+node_modules/
+
+# CI/CD artifacts
+.github/workflows/tmp/
+
+# Documentation build
+docs/_build/
+
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# Working directories
+icons/
