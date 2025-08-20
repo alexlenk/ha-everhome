@@ -6,7 +6,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import aiohttp
 import pytest
-from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 
@@ -44,7 +43,9 @@ class TestEverhomeInit:
             patch(
                 "homeassistant.helpers.config_entry_oauth2_flow.OAuth2Session"
             ) as mock_oauth_session,
-            patch("custom_components.everhome.EverhomeAuth") as mock_auth_class,
+            patch(
+                "custom_components.everhome.EverhomeAuth"
+            ) as mock_auth_class,
             patch(
                 "custom_components.everhome.EverhomeDataUpdateCoordinator"
             ) as mock_coordinator_class,
@@ -64,11 +65,16 @@ class TestEverhomeInit:
             assert result is True
             assert DOMAIN in hass.data
             assert mock_config_entry.entry_id in hass.data[DOMAIN]
-            assert hass.data[DOMAIN][mock_config_entry.entry_id] == mock_coordinator
+            assert (
+                hass.data[DOMAIN][mock_config_entry.entry_id]
+                == mock_coordinator
+            )
 
             # Verify coordinator was set up
             mock_coordinator.async_config_entry_first_refresh.assert_called_once()
-            mock_forward_setups.assert_called_once_with(mock_config_entry, PLATFORMS)
+            mock_forward_setups.assert_called_once_with(
+                mock_config_entry, PLATFORMS
+            )
 
     async def test_setup_entry_auth_failed(
         self,
@@ -99,7 +105,9 @@ class TestEverhomeInit:
             patch(
                 "homeassistant.helpers.config_entry_oauth2_flow.OAuth2Session"
             ) as mock_oauth_session,
-            patch("custom_components.everhome.EverhomeAuth") as mock_auth_class,
+            patch(
+                "custom_components.everhome.EverhomeAuth"
+            ) as mock_auth_class,
         ):
 
             mock_get_impl.return_value = mock_implementation
@@ -138,7 +146,9 @@ class TestEverhomeInit:
             patch(
                 "homeassistant.helpers.config_entry_oauth2_flow.OAuth2Session"
             ) as mock_oauth_session,
-            patch("custom_components.everhome.EverhomeAuth") as mock_auth_class,
+            patch(
+                "custom_components.everhome.EverhomeAuth"
+            ) as mock_auth_class,
         ):
 
             mock_get_impl.return_value = mock_implementation
@@ -172,7 +182,9 @@ class TestEverhomeInit:
             patch(
                 "homeassistant.helpers.config_entry_oauth2_flow.OAuth2Session"
             ) as mock_oauth_session,
-            patch("custom_components.everhome.EverhomeAuth") as mock_auth_class,
+            patch(
+                "custom_components.everhome.EverhomeAuth"
+            ) as mock_auth_class,
         ):
 
             mock_get_impl.return_value = mock_implementation
@@ -198,8 +210,8 @@ class TestEverhomeInit:
 
         # Mock coordinator that fails on first refresh
         mock_coordinator = AsyncMock()
-        mock_coordinator.async_config_entry_first_refresh.side_effect = Exception(
-            "Refresh failed"
+        mock_coordinator.async_config_entry_first_refresh.side_effect = (
+            Exception("Refresh failed")
         )
 
         with (
@@ -209,7 +221,9 @@ class TestEverhomeInit:
             patch(
                 "homeassistant.helpers.config_entry_oauth2_flow.OAuth2Session"
             ) as mock_oauth_session,
-            patch("custom_components.everhome.EverhomeAuth") as mock_auth_class,
+            patch(
+                "custom_components.everhome.EverhomeAuth"
+            ) as mock_auth_class,
             patch(
                 "custom_components.everhome.EverhomeDataUpdateCoordinator"
             ) as mock_coordinator_class,
@@ -243,7 +257,9 @@ class TestEverhomeInit:
 
             assert result is True
             assert mock_config_entry.entry_id not in hass.data[DOMAIN]
-            mock_unload_platforms.assert_called_once_with(mock_config_entry, PLATFORMS)
+            mock_unload_platforms.assert_called_once_with(
+                mock_config_entry, PLATFORMS
+            )
 
     async def test_unload_entry_failure(
         self,
@@ -266,7 +282,9 @@ class TestEverhomeInit:
             assert result is False
             # Data should still be there on failed unload
             assert mock_config_entry.entry_id in hass.data[DOMAIN]
-            mock_unload_platforms.assert_called_once_with(mock_config_entry, PLATFORMS)
+            mock_unload_platforms.assert_called_once_with(
+                mock_config_entry, PLATFORMS
+            )
 
     async def test_unload_entry_no_data(
         self,
@@ -285,7 +303,9 @@ class TestEverhomeInit:
 
             assert result is True
             # Should handle KeyError gracefully
-            mock_unload_platforms.assert_called_once_with(mock_config_entry, PLATFORMS)
+            mock_unload_platforms.assert_called_once_with(
+                mock_config_entry, PLATFORMS
+            )
 
     async def test_setup_entry_data_structure(
         self,
@@ -313,7 +333,9 @@ class TestEverhomeInit:
             patch(
                 "homeassistant.helpers.config_entry_oauth2_flow.OAuth2Session"
             ) as mock_oauth_session,
-            patch("custom_components.everhome.EverhomeAuth") as mock_auth_class,
+            patch(
+                "custom_components.everhome.EverhomeAuth"
+            ) as mock_auth_class,
             patch(
                 "custom_components.everhome.EverhomeDataUpdateCoordinator"
             ) as mock_coordinator_class,

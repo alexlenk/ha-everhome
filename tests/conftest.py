@@ -2,16 +2,13 @@
 
 from __future__ import annotations
 
-import json
 from typing import Any, Dict
 from unittest.mock import patch
 
 import pytest
-from homeassistant.config_entries import ConfigEntry, ConfigEntryState
+from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
-
-pytest_plugins = "pytest_homeassistant_custom_component"
 
 from custom_components.everhome.const import (
     CONF_ACCESS_TOKEN,
@@ -123,7 +120,9 @@ def mock_awning_device() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def mock_devices_response(mock_shutter_device, mock_awning_device) -> Dict[str, Any]:
+def mock_devices_response(
+    mock_shutter_device, mock_awning_device
+) -> Dict[str, Any]:
     """Mock devices API response."""
     return {
         "devices": [
@@ -206,12 +205,15 @@ async def setup_integration(
             return_value=mock_everhome_api,
         ),
         patch(
-            "custom_components.everhome.api.EverhomeAPI", return_value=mock_everhome_api
+            "custom_components.everhome.api.EverhomeAPI",
+            return_value=mock_everhome_api,
         ),
     ):
 
         # Setup the integration
-        result = await hass.config_entries.async_setup(mock_config_entry.entry_id)
+        result = await hass.config_entries.async_setup(
+            mock_config_entry.entry_id
+        )
         await hass.async_block_till_done()
 
         # Verify the entry was loaded

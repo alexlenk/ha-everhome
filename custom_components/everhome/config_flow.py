@@ -5,8 +5,6 @@ from typing import Any, Optional
 
 import aiohttp
 import voluptuous as vol
-from homeassistant import config_entries
-from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import config_entry_oauth2_flow
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -30,7 +28,9 @@ class EverhomeFlowHandler(config_entry_oauth2_flow.AbstractOAuth2FlowHandler):
         """Return logger."""
         return logging.getLogger(__name__)
 
-    async def async_step_reauth(self, entry_data: dict[str, Any]) -> FlowResult:
+    async def async_step_reauth(
+        self, entry_data: dict[str, Any]
+    ) -> FlowResult:
         """Perform reauth upon an API authentication error."""
         return await self.async_step_reauth_confirm()
 
@@ -45,14 +45,18 @@ class EverhomeFlowHandler(config_entry_oauth2_flow.AbstractOAuth2FlowHandler):
             )
         return await self.async_step_user()
 
-    async def async_oauth_create_entry(self, data: dict[str, Any]) -> FlowResult:
+    async def async_oauth_create_entry(
+        self, data: dict[str, Any]
+    ) -> FlowResult:
         """Create an entry for the OAuth2 config flow."""
         session = async_get_clientsession(self.hass)
         access_token = data["token"]["access_token"]
 
         try:
             headers = {"Authorization": f"Bearer {access_token}"}
-            async with session.get(f"{API_BASE_URL}/device", headers=headers) as resp:
+            async with session.get(
+                f"{API_BASE_URL}/device", headers=headers
+            ) as resp:
                 if resp.status != 200:
                     return self.async_abort(reason="cannot_connect")
                 devices = await resp.json()

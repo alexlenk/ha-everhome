@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import aiohttp
@@ -54,7 +53,9 @@ class TestEverhomeConfigFlow:
         mock_response.json.return_value = mock_devices_response["devices"]
 
         mock_session_instance = AsyncMock()
-        mock_session_instance.get.return_value.__aenter__.return_value = mock_response
+        mock_session_instance.get.return_value.__aenter__.return_value = (
+            mock_response
+        )
         mock_aiohttp_session.return_value = mock_session_instance
 
         # Start the flow
@@ -101,7 +102,9 @@ class TestEverhomeConfigFlow:
         mock_response.json.return_value = mock_devices_response["devices"]
 
         mock_session_instance = AsyncMock()
-        mock_session_instance.get.return_value.__aenter__.return_value = mock_response
+        mock_session_instance.get.return_value.__aenter__.return_value = (
+            mock_response
+        )
         mock_aiohttp_session.return_value = mock_session_instance
 
         flow = EverhomeFlowHandler()
@@ -129,7 +132,9 @@ class TestEverhomeConfigFlow:
         mock_response.status = 401
 
         mock_session_instance = AsyncMock()
-        mock_session_instance.get.return_value.__aenter__.return_value = mock_response
+        mock_session_instance.get.return_value.__aenter__.return_value = (
+            mock_response
+        )
         mock_aiohttp_session.return_value = mock_session_instance
 
         flow = EverhomeFlowHandler()
@@ -153,7 +158,9 @@ class TestEverhomeConfigFlow:
         """Test OAuth entry creation with aiohttp client error."""
         # Mock aiohttp client error
         mock_session_instance = AsyncMock()
-        mock_session_instance.get.side_effect = aiohttp.ClientError("Network error")
+        mock_session_instance.get.side_effect = aiohttp.ClientError(
+            "Network error"
+        )
         mock_aiohttp_session.return_value = mock_session_instance
 
         flow = EverhomeFlowHandler()
@@ -229,7 +236,9 @@ class TestEverhomeConfigFlow:
 
         # Confirm reauth
         with patch.object(flow, "async_step_user") as mock_user_step:
-            mock_user_step.return_value = {"type": FlowResultType.EXTERNAL_STEP}
+            mock_user_step.return_value = {
+                "type": FlowResultType.EXTERNAL_STEP
+            }
 
             result = await flow.async_step_reauth_confirm({"confirm": True})
 
@@ -248,7 +257,9 @@ class TestEverhomeConfigFlow:
         mock_response.json.return_value = mock_devices_response["devices"]
 
         mock_session_instance = AsyncMock()
-        mock_session_instance.get.return_value.__aenter__.return_value = mock_response
+        mock_session_instance.get.return_value.__aenter__.return_value = (
+            mock_response
+        )
         mock_aiohttp_session.return_value = mock_session_instance
 
         flow = EverhomeFlowHandler()
@@ -278,7 +289,9 @@ class TestEverhomeConfigFlow:
         mock_response.json.return_value = mock_devices_response["devices"]
 
         mock_session_instance = AsyncMock()
-        mock_session_instance.get.return_value.__aenter__.return_value = mock_response
+        mock_session_instance.get.return_value.__aenter__.return_value = (
+            mock_response
+        )
         mock_aiohttp_session.return_value = mock_session_instance
 
         flow = EverhomeFlowHandler()

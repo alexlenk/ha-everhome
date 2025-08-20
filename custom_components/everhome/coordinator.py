@@ -2,15 +2,17 @@
 
 import asyncio
 import logging
-from datetime import datetime, timedelta
+from datetime import timedelta
 from typing import Any, Optional
 
-import aiohttp
 from aiohttp.client_exceptions import ClientError
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.helpers.update_coordinator import (
+    DataUpdateCoordinator,
+    UpdateFailed,
+)
 
 from .api import EverhomeAuth
 from .const import (
@@ -82,7 +84,10 @@ class EverhomeDataUpdateCoordinator(DataUpdateCoordinator):
             return shutter_devices
 
     async def execute_device_action(
-        self, device_id: str, action: str, params: Optional[dict[str, Any]] = None
+        self,
+        device_id: str,
+        action: str,
+        params: Optional[dict[str, Any]] = None,
     ) -> bool:
         """Execute an action on a device."""
         access_token = await self.auth.async_get_access_token()
@@ -111,6 +116,9 @@ class EverhomeDataUpdateCoordinator(DataUpdateCoordinator):
                 return True
         except (ClientError, asyncio.TimeoutError) as err:
             _LOGGER.error(
-                "Error executing action %s on device %s: %s", action, device_id, err
+                "Error executing action %s on device %s: %s",
+                action,
+                device_id,
+                err,
             )
             return False

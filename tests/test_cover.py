@@ -320,7 +320,9 @@ class TestEverhomeCover:
         device_data["position"] = -10
         assert cover.current_cover_position == 0
 
-    def test_current_cover_position_general_state_fallback(self, mock_coordinator):
+    def test_current_cover_position_general_state_fallback(
+        self, mock_coordinator
+    ):
         """Test current_cover_position property using general state fallback."""
         device_data = {
             "id": "device_001",
@@ -382,7 +384,9 @@ class TestEverhomeCover:
         )
         mock_coordinator.async_request_refresh.assert_called_once()
 
-    async def test_async_set_cover_position_with_capability(self, mock_coordinator):
+    async def test_async_set_cover_position_with_capability(
+        self, mock_coordinator
+    ):
         """Test setting cover position with set_position capability."""
         device_data = {
             "id": "device_001",
@@ -398,7 +402,9 @@ class TestEverhomeCover:
         )
         mock_coordinator.async_request_refresh.assert_called_once()
 
-    async def test_async_set_cover_position_fallback_open(self, mock_coordinator):
+    async def test_async_set_cover_position_fallback_open(
+        self, mock_coordinator
+    ):
         """Test setting cover position fallback to open."""
         device_data = mock_coordinator.data["shutter_001"]
         cover = EverhomeCover(mock_coordinator, "shutter_001", device_data)
@@ -407,7 +413,9 @@ class TestEverhomeCover:
             await cover.async_set_cover_position(**{ATTR_POSITION: 75})
             mock_open.assert_called_once()
 
-    async def test_async_set_cover_position_fallback_close(self, mock_coordinator):
+    async def test_async_set_cover_position_fallback_close(
+        self, mock_coordinator
+    ):
         """Test setting cover position fallback to close."""
         device_data = mock_coordinator.data["shutter_001"]
         cover = EverhomeCover(mock_coordinator, "shutter_001", device_data)
@@ -427,7 +435,9 @@ class TestEverhomeCover:
         cover = EverhomeCover(mock_coordinator, "device_001", device_data)
 
         expected_features = (
-            CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE | CoverEntityFeature.STOP
+            CoverEntityFeature.OPEN
+            | CoverEntityFeature.CLOSE
+            | CoverEntityFeature.STOP
         )
         assert cover._attr_supported_features == expected_features
 

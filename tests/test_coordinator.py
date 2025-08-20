@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from datetime import timedelta
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock
 
 import aiohttp
 import pytest
@@ -13,7 +13,9 @@ from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import UpdateFailed
 
 from custom_components.everhome.const import DOMAIN, UPDATE_INTERVAL
-from custom_components.everhome.coordinator import EverhomeDataUpdateCoordinator
+from custom_components.everhome.coordinator import (
+    EverhomeDataUpdateCoordinator,
+)
 
 
 class TestEverhomeDataUpdateCoordinator:
@@ -30,19 +32,25 @@ class TestEverhomeDataUpdateCoordinator:
     @pytest.fixture
     def coordinator(self, hass: HomeAssistant, mock_auth, mock_config_entry):
         """Create coordinator fixture."""
-        return EverhomeDataUpdateCoordinator(hass, mock_auth, mock_config_entry)
+        return EverhomeDataUpdateCoordinator(
+            hass, mock_auth, mock_config_entry
+        )
 
     def test_coordinator_initialization(
         self, hass: HomeAssistant, mock_auth, mock_config_entry
     ):
         """Test coordinator initialization."""
-        coordinator = EverhomeDataUpdateCoordinator(hass, mock_auth, mock_config_entry)
+        coordinator = EverhomeDataUpdateCoordinator(
+            hass, mock_auth, mock_config_entry
+        )
 
         assert coordinator.auth == mock_auth
         assert coordinator.hass == hass
         assert coordinator.entry == mock_config_entry
         assert coordinator.name == DOMAIN
-        assert coordinator.update_interval == timedelta(seconds=UPDATE_INTERVAL)
+        assert coordinator.update_interval == timedelta(
+            seconds=UPDATE_INTERVAL
+        )
         assert coordinator._devices == {}
 
     async def test_update_data_success(
@@ -114,7 +122,9 @@ class TestEverhomeDataUpdateCoordinator:
         with pytest.raises(UpdateFailed, match="Failed to get devices: 500"):
             await coordinator._get_devices()
 
-    async def test_get_devices_filters_device_types(self, coordinator, mock_auth):
+    async def test_get_devices_filters_device_types(
+        self, coordinator, mock_auth
+    ):
         """Test that get_devices properly filters device types."""
         devices_data = [
             {"id": "shutter_001", "subtype": "shutter"},
@@ -180,7 +190,9 @@ class TestEverhomeDataUpdateCoordinator:
         assert "Authorization" in headers
         assert "Content-Type" in headers
 
-    async def test_execute_device_action_http_error(self, coordinator, mock_auth):
+    async def test_execute_device_action_http_error(
+        self, coordinator, mock_auth
+    ):
         """Test device action execution with HTTP error."""
         mock_response = AsyncMock()
         mock_response.status = 400
@@ -190,11 +202,15 @@ class TestEverhomeDataUpdateCoordinator:
             mock_response
         )
 
-        result = await coordinator.execute_device_action("device_001", "invalid_action")
+        result = await coordinator.execute_device_action(
+            "device_001", "invalid_action"
+        )
 
         assert result is False
 
-    async def test_execute_device_action_client_error(self, coordinator, mock_auth):
+    async def test_execute_device_action_client_error(
+        self, coordinator, mock_auth
+    ):
         """Test device action execution with client error."""
         mock_auth.aiohttp_session.post.side_effect = aiohttp.ClientError(
             "Connection failed"
@@ -204,7 +220,9 @@ class TestEverhomeDataUpdateCoordinator:
 
         assert result is False
 
-    async def test_execute_device_action_timeout_error(self, coordinator, mock_auth):
+    async def test_execute_device_action_timeout_error(
+        self, coordinator, mock_auth
+    ):
         """Test device action execution with timeout error."""
         mock_auth.aiohttp_session.post.side_effect = asyncio.TimeoutError()
 
@@ -248,7 +266,9 @@ class TestEverhomeDataUpdateCoordinator:
 
         assert result == {}
 
-    async def test_coordinator_api_url_construction(self, coordinator, mock_auth):
+    async def test_coordinator_api_url_construction(
+        self, coordinator, mock_auth
+    ):
         """Test that coordinator constructs correct API URLs."""
         mock_response = AsyncMock()
         mock_response.status = 200
@@ -265,7 +285,9 @@ class TestEverhomeDataUpdateCoordinator:
         expected_url = "https://everhome.cloud/device"
         assert call_args[0][0] == expected_url
 
-    async def test_execute_action_url_construction(self, coordinator, mock_auth):
+    async def test_execute_action_url_construction(
+        self, coordinator, mock_auth
+    ):
         """Test that execute action constructs correct URLs."""
         mock_response = AsyncMock()
         mock_response.status = 200

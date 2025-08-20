@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-import pytest
-from homeassistant.components.application_credentials import AuthorizationServer
+from homeassistant.components.application_credentials import (
+    AuthorizationServer,
+)
 from homeassistant.core import HomeAssistant
 
 from custom_components.everhome.application_credentials import (
