@@ -18,9 +18,6 @@ _LOGGER = logging.getLogger(__name__)
 
 class EverhomeFlowHandler(config_entry_oauth2_flow.AbstractOAuth2FlowHandler):
     """Config flow to handle Everhome OAuth2 authentication."""
-    
-    DOMAIN = DOMAIN
-    """Config flow to handle Everhome OAuth2 authentication."""
 
     DOMAIN = DOMAIN
     VERSION = 1

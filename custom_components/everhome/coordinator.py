@@ -81,7 +81,9 @@ class EverhomeDataUpdateCoordinator(DataUpdateCoordinator):
 
             return shutter_devices
 
-    async def execute_device_action(self, device_id: str, action: str, params: Optional[dict[str, Any]] = None) -> bool:
+    async def execute_device_action(
+        self, device_id: str, action: str, params: Optional[dict[str, Any]] = None
+    ) -> bool:
         """Execute an action on a device."""
         access_token = await self.auth.async_get_access_token()
         headers = {
