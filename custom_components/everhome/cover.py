@@ -75,9 +75,7 @@ class EverhomeCover(CoordinatorEntity, CoverEntity):
         else:
             self._attr_device_class = CoverDeviceClass.SHUTTER
         self._attr_supported_features = (
-            CoverEntityFeature.OPEN
-            | CoverEntityFeature.CLOSE
-            | CoverEntityFeature.STOP
+            CoverEntityFeature.OPEN | CoverEntityFeature.CLOSE | CoverEntityFeature.STOP
         )
 
         # Add position support if available in the device data
@@ -199,23 +197,17 @@ class EverhomeCover(CoordinatorEntity, CoverEntity):
 
     async def async_open_cover(self, **kwargs: Any) -> None:
         """Open the cover."""
-        await self.coordinator.execute_device_action(
-            self._device_id, ACTION_OPEN
-        )
+        await self.coordinator.execute_device_action(self._device_id, ACTION_OPEN)
         await self.coordinator.async_request_refresh()
 
     async def async_close_cover(self, **kwargs: Any) -> None:
         """Close the cover."""
-        await self.coordinator.execute_device_action(
-            self._device_id, ACTION_CLOSE
-        )
+        await self.coordinator.execute_device_action(self._device_id, ACTION_CLOSE)
         await self.coordinator.async_request_refresh()
 
     async def async_stop_cover(self, **kwargs: Any) -> None:
         """Stop the cover."""
-        await self.coordinator.execute_device_action(
-            self._device_id, ACTION_STOP
-        )
+        await self.coordinator.execute_device_action(self._device_id, ACTION_STOP)
         await self.coordinator.async_request_refresh()
 
     async def async_set_cover_position(self, **kwargs: Any) -> None:

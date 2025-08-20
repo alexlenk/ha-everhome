@@ -102,9 +102,7 @@ class TestEverhomeAuth:
     ):
         """Test access token retrieval with different token structures."""
         # Test with token containing additional fields
-        mock_oauth_session = AsyncMock(
-            spec=config_entry_oauth2_flow.OAuth2Session
-        )
+        mock_oauth_session = AsyncMock(spec=config_entry_oauth2_flow.OAuth2Session)
         mock_oauth_session.token = {
             "access_token": "complex_access_token",
             "refresh_token": "refresh_token",
@@ -122,9 +120,7 @@ class TestEverhomeAuth:
         self, hass: HomeAssistant, mock_aiohttp_session
     ):
         """Test access token retrieval with empty token."""
-        mock_oauth_session = AsyncMock(
-            spec=config_entry_oauth2_flow.OAuth2Session
-        )
+        mock_oauth_session = AsyncMock(spec=config_entry_oauth2_flow.OAuth2Session)
         mock_oauth_session.token = {"access_token": ""}
         mock_oauth_session.async_ensure_token_valid.return_value = None
 
@@ -137,9 +133,7 @@ class TestEverhomeAuth:
         self, hass: HomeAssistant, mock_aiohttp_session
     ):
         """Test access token retrieval with None token."""
-        mock_oauth_session = AsyncMock(
-            spec=config_entry_oauth2_flow.OAuth2Session
-        )
+        mock_oauth_session = AsyncMock(spec=config_entry_oauth2_flow.OAuth2Session)
         mock_oauth_session.token = {"access_token": None}
         mock_oauth_session.async_ensure_token_valid.return_value = None
 
@@ -148,9 +142,7 @@ class TestEverhomeAuth:
 
         assert token is None
 
-    def test_aiohttp_session_property(
-        self, everhome_auth, mock_aiohttp_session
-    ):
+    def test_aiohttp_session_property(self, everhome_auth, mock_aiohttp_session):
         """Test that aiohttp_session property returns correct session."""
         assert everhome_auth.aiohttp_session == mock_aiohttp_session
 
@@ -169,9 +161,7 @@ class TestEverhomeAuth:
         # And that it was called before accessing the token
         assert mock_oauth_session.async_ensure_token_valid.called
 
-    async def test_concurrent_token_requests(
-        self, everhome_auth, mock_oauth_session
-    ):
+    async def test_concurrent_token_requests(self, everhome_auth, mock_oauth_session):
         """Test concurrent access token requests."""
         import asyncio
 
@@ -190,9 +180,7 @@ class TestEverhomeAuth:
         self, hass: HomeAssistant, mock_aiohttp_session
     ):
         """Test that EverhomeAuth maintains state correctly."""
-        mock_oauth_session = AsyncMock(
-            spec=config_entry_oauth2_flow.OAuth2Session
-        )
+        mock_oauth_session = AsyncMock(spec=config_entry_oauth2_flow.OAuth2Session)
         mock_oauth_session.token = {"access_token": "persistent_token"}
 
         auth = EverhomeAuth(hass, mock_oauth_session)
@@ -205,9 +193,7 @@ class TestEverhomeAuth:
         # State should persist
         assert auth.session.token["access_token"] == "persistent_token"
 
-    async def test_token_refresh_side_effects(
-        self, everhome_auth, mock_oauth_session
-    ):
+    async def test_token_refresh_side_effects(self, everhome_auth, mock_oauth_session):
         """Test side effects of token refresh."""
         # Simulate token change during refresh
         original_token = "original_token"

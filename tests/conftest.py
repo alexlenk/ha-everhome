@@ -120,9 +120,7 @@ def mock_awning_device() -> Dict[str, Any]:
 
 
 @pytest.fixture
-def mock_devices_response(
-    mock_shutter_device, mock_awning_device
-) -> Dict[str, Any]:
+def mock_devices_response(mock_shutter_device, mock_awning_device) -> Dict[str, Any]:
     """Mock devices API response."""
     return {
         "devices": [
@@ -211,9 +209,7 @@ async def setup_integration(
     ):
 
         # Setup the integration
-        result = await hass.config_entries.async_setup(
-            mock_config_entry.entry_id
-        )
+        result = await hass.config_entries.async_setup(mock_config_entry.entry_id)
         await hass.async_block_till_done()
 
         # Verify the entry was loaded
