@@ -50,8 +50,8 @@ class TestEverhomeInit:
             patch(
                 "custom_components.everhome.EverhomeDataUpdateCoordinator"
             ) as mock_coordinator_class,
-            patch(
-                "homeassistant.config_entries.ConfigEntry.async_forward_entry_setups"
+            patch.object(
+                hass.config_entries, "async_forward_entry_setups"
             ) as mock_forward_setups,
         ):
 
@@ -220,8 +220,8 @@ class TestEverhomeInit:
         mock_coordinator = AsyncMock()
         hass.data[DOMAIN][mock_config_entry.entry_id] = mock_coordinator
 
-        with patch(
-            "homeassistant.config_entries.ConfigEntry.async_unload_platforms"
+        with patch.object(
+            hass.config_entries, "async_unload_platforms"
         ) as mock_unload_platforms:
             mock_unload_platforms.return_value = True
 
@@ -242,8 +242,8 @@ class TestEverhomeInit:
         mock_coordinator = AsyncMock()
         hass.data[DOMAIN][mock_config_entry.entry_id] = mock_coordinator
 
-        with patch(
-            "homeassistant.config_entries.ConfigEntry.async_unload_platforms"
+        with patch.object(
+            hass.config_entries, "async_unload_platforms"
         ) as mock_unload_platforms:
             mock_unload_platforms.return_value = False
 
@@ -262,8 +262,8 @@ class TestEverhomeInit:
         """Test unloading when no data exists."""
         # Don't set up any data
 
-        with patch(
-            "homeassistant.config_entries.ConfigEntry.async_unload_platforms"
+        with patch.object(
+            hass.config_entries, "async_unload_platforms"
         ) as mock_unload_platforms:
             mock_unload_platforms.return_value = True
 
@@ -299,8 +299,8 @@ class TestEverhomeInit:
             patch(
                 "custom_components.everhome.EverhomeDataUpdateCoordinator"
             ) as mock_coordinator_class,
-            patch(
-                "homeassistant.config_entries.ConfigEntry.async_forward_entry_setups"
+            patch.object(
+                hass.config_entries, "async_forward_entry_setups"
             ),
         ):
 

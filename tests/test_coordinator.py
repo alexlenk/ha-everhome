@@ -26,7 +26,24 @@ class TestEverhomeDataUpdateCoordinator:
         """Mock EverhomeAuth."""
         auth = AsyncMock()
         auth.async_get_access_token.return_value = "test_access_token"
-        auth.aiohttp_session = AsyncMock()
+        
+        # Create properly configured aiohttp session mock
+        mock_session = AsyncMock()
+        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session.__aexit__ = AsyncMock(return_value=None)
+        
+        # Configure GET and POST methods to return proper async context managers
+        mock_get_ctx = AsyncMock()
+        mock_get_ctx.__aenter__ = AsyncMock()
+        mock_get_ctx.__aexit__ = AsyncMock(return_value=None)
+        mock_session.get.return_value = mock_get_ctx
+        
+        mock_post_ctx = AsyncMock()
+        mock_post_ctx.__aenter__ = AsyncMock()
+        mock_post_ctx.__aexit__ = AsyncMock(return_value=None)
+        mock_session.post.return_value = mock_post_ctx
+        
+        auth.aiohttp_session = mock_session
         return auth
 
     @pytest.fixture

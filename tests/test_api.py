@@ -22,15 +22,6 @@ class TestEverhomeAuth:
         session.async_ensure_token_valid.return_value = None
         return session
 
-    @pytest.fixture
-    def mock_aiohttp_session(self):
-        """Mock aiohttp client session."""
-        with patch(
-            "homeassistant.helpers.aiohttp_client.async_get_clientsession"
-        ) as mock_get_session:
-            mock_session = AsyncMock()
-            mock_get_session.return_value = mock_session
-            yield mock_session
 
     @pytest.fixture
     def everhome_auth(
@@ -43,10 +34,12 @@ class TestEverhomeAuth:
         self, hass: HomeAssistant, mock_oauth_session, mock_aiohttp_session
     ):
         """Test EverhomeAuth initialization."""
+        # Use the already mocked session from conftest.py
         auth = EverhomeAuth(hass, mock_oauth_session)
 
         assert auth.hass == hass
         assert auth.session == mock_oauth_session
+        # The aiohttp_session will be the mock from conftest.py
         assert auth.aiohttp_session == mock_aiohttp_session
 
     async def test_async_get_access_token_success(

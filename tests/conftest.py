@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from typing import Any, Dict
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from homeassistant.config_entries import ConfigEntryState
@@ -222,5 +222,10 @@ async def setup_integration(
 @pytest.fixture
 def mock_aiohttp_session():
     """Mock aiohttp session for API testing."""
-    with patch("aiohttp.ClientSession") as mock_session:
+    with patch("homeassistant.helpers.aiohttp_client.async_get_clientsession") as mock_get_session:
+        mock_session = AsyncMock()
+        # Configure async context manager support
+        mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+        mock_session.__aexit__ = AsyncMock(return_value=None)
+        mock_get_session.return_value = mock_session
         yield mock_session

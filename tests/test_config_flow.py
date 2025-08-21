@@ -28,15 +28,6 @@ def mock_oauth_impl():
         yield mock_impl
 
 
-@pytest.fixture
-def mock_oauth_session():
-    """Mock OAuth session."""
-    with patch(
-        "homeassistant.helpers.config_entry_oauth2_flow.async_create_auth_session"
-    ) as mock_session:
-        yield mock_session
-
-
 class TestEverhomeConfigFlow:
     """Test Everhome config flow."""
 
@@ -44,7 +35,6 @@ class TestEverhomeConfigFlow:
         self,
         hass: HomeAssistant,
         mock_oauth_impl,
-        mock_oauth_session,
         mock_devices_response,
         mock_aiohttp_session,
     ):
@@ -54,9 +44,11 @@ class TestEverhomeConfigFlow:
         mock_response.status = 200
         mock_response.json.return_value = mock_devices_response["devices"]
 
-        mock_session_instance = AsyncMock()
-        mock_session_instance.get.return_value.__aenter__.return_value = mock_response
-        mock_aiohttp_session.return_value = mock_session_instance
+        # Configure the aiohttp session mock to properly handle async context manager
+        mock_get_context = AsyncMock()
+        mock_get_context.__aenter__ = AsyncMock(return_value=mock_response)
+        mock_get_context.__aexit__ = AsyncMock(return_value=None)
+        mock_aiohttp_session.get.return_value = mock_get_context
 
         # Start the flow
         result = await hass.config_entries.flow.async_init(
@@ -99,11 +91,13 @@ class TestEverhomeConfigFlow:
         # Mock successful device fetch
         mock_response = AsyncMock()
         mock_response.status = 200
-        mock_response.json.return_value = mock_devices_response["devices"]
+        mock_response.json = AsyncMock(return_value=mock_devices_response["devices"])
 
-        mock_session_instance = AsyncMock()
-        mock_session_instance.get.return_value.__aenter__.return_value = mock_response
-        mock_aiohttp_session.return_value = mock_session_instance
+        # Configure the aiohttp session mock to properly handle async context manager
+        mock_get_context = AsyncMock()
+        mock_get_context.__aenter__ = AsyncMock(return_value=mock_response)
+        mock_get_context.__aexit__ = AsyncMock(return_value=None)
+        mock_aiohttp_session.get.return_value = mock_get_context
 
         flow = EverhomeFlowHandler()
         flow.hass = hass
@@ -114,7 +108,7 @@ class TestEverhomeConfigFlow:
         }
 
         result = await flow.async_oauth_create_entry(oauth_data)
-
+        
         assert result["type"] == FlowResultType.CREATE_ENTRY
         assert result["title"] == "Everhome (2 devices)"
         assert result["data"] == oauth_data
@@ -129,9 +123,11 @@ class TestEverhomeConfigFlow:
         mock_response = AsyncMock()
         mock_response.status = 401
 
-        mock_session_instance = AsyncMock()
-        mock_session_instance.get.return_value.__aenter__.return_value = mock_response
-        mock_aiohttp_session.return_value = mock_session_instance
+        # Configure the aiohttp session mock to properly handle async context manager
+        mock_get_context = AsyncMock()
+        mock_get_context.__aenter__ = AsyncMock(return_value=mock_response)
+        mock_get_context.__aexit__ = AsyncMock(return_value=None)
+        mock_aiohttp_session.get.return_value = mock_get_context
 
         flow = EverhomeFlowHandler()
         flow.hass = hass
@@ -153,9 +149,8 @@ class TestEverhomeConfigFlow:
     ):
         """Test OAuth entry creation with aiohttp client error."""
         # Mock aiohttp client error
-        mock_session_instance = AsyncMock()
-        mock_session_instance.get.side_effect = aiohttp.ClientError("Network error")
-        mock_aiohttp_session.return_value = mock_session_instance
+        # Configure the aiohttp session mock with client error
+        mock_aiohttp_session.get.side_effect = aiohttp.ClientError("Network error")
 
         flow = EverhomeFlowHandler()
         flow.hass = hass
@@ -177,9 +172,8 @@ class TestEverhomeConfigFlow:
     ):
         """Test OAuth entry creation with unexpected error."""
         # Mock unexpected error
-        mock_session_instance = AsyncMock()
-        mock_session_instance.get.side_effect = Exception("Unexpected error")
-        mock_aiohttp_session.return_value = mock_session_instance
+        # Configure the aiohttp session mock with unexpected error
+        mock_aiohttp_session.get.side_effect = Exception("Unexpected error")
 
         flow = EverhomeFlowHandler()
         flow.hass = hass
@@ -248,9 +242,11 @@ class TestEverhomeConfigFlow:
         mock_response.status = 200
         mock_response.json.return_value = mock_devices_response["devices"]
 
-        mock_session_instance = AsyncMock()
-        mock_session_instance.get.return_value.__aenter__.return_value = mock_response
-        mock_aiohttp_session.return_value = mock_session_instance
+        # Configure the aiohttp session mock to properly handle async context manager
+        mock_get_context = AsyncMock()
+        mock_get_context.__aenter__ = AsyncMock(return_value=mock_response)
+        mock_get_context.__aexit__ = AsyncMock(return_value=None)
+        mock_aiohttp_session.get.return_value = mock_get_context
 
         flow = EverhomeFlowHandler()
         flow.hass = hass
@@ -278,9 +274,11 @@ class TestEverhomeConfigFlow:
         mock_response.status = 200
         mock_response.json.return_value = mock_devices_response["devices"]
 
-        mock_session_instance = AsyncMock()
-        mock_session_instance.get.return_value.__aenter__.return_value = mock_response
-        mock_aiohttp_session.return_value = mock_session_instance
+        # Configure the aiohttp session mock to properly handle async context manager
+        mock_get_context = AsyncMock()
+        mock_get_context.__aenter__ = AsyncMock(return_value=mock_response)
+        mock_get_context.__aexit__ = AsyncMock(return_value=None)
+        mock_aiohttp_session.get.return_value = mock_get_context
 
         flow = EverhomeFlowHandler()
         flow.hass = hass
