@@ -34,11 +34,14 @@ class TestEverhomeConfigFlow:
 
     def test_flow_handler_inheritance(self):
         """Test that flow handler inherits from correct base class."""
+        from homeassistant.helpers.config_entry_oauth2_flow import (
+            AbstractOAuth2FlowHandler,
+        )
+
         from custom_components.everhome.config_flow import EverhomeFlowHandler
-        from homeassistant.helpers.config_entry_oauth2_flow import AbstractOAuth2FlowHandler
-        
+
         assert issubclass(EverhomeFlowHandler, AbstractOAuth2FlowHandler)
-        assert hasattr(EverhomeFlowHandler, 'async_oauth_create_entry')
+        assert hasattr(EverhomeFlowHandler, "async_oauth_create_entry")
 
     async def test_oauth_create_entry_success(
         self,
@@ -57,9 +60,9 @@ class TestEverhomeConfigFlow:
         with aioresponses() as m:
             # Mock successful device fetch
             m.get(f"{API_BASE_URL}/device", payload=mock_devices_response["devices"])
-            
+
             result = await flow.async_oauth_create_entry(oauth_data)
-        
+
         assert result["type"] == FlowResultType.CREATE_ENTRY
         assert result["title"] == "Everhome (2 devices)"
         assert result["data"] == oauth_data
@@ -80,7 +83,7 @@ class TestEverhomeConfigFlow:
         with aioresponses() as m:
             # Mock failed device fetch (401 unauthorized)
             m.get(f"{API_BASE_URL}/device", status=401)
-            
+
             result = await flow.async_oauth_create_entry(oauth_data)
 
         assert result["type"] == FlowResultType.ABORT
@@ -101,8 +104,10 @@ class TestEverhomeConfigFlow:
 
         with aioresponses() as m:
             # Mock aiohttp client error
-            m.get(f"{API_BASE_URL}/device", exception=aiohttp.ClientError("Network error"))
-            
+            m.get(
+                f"{API_BASE_URL}/device", exception=aiohttp.ClientError("Network error")
+            )
+
             result = await flow.async_oauth_create_entry(oauth_data)
 
         assert result["type"] == FlowResultType.ABORT
@@ -124,7 +129,7 @@ class TestEverhomeConfigFlow:
         with aioresponses() as m:
             # Mock unexpected error
             m.get(f"{API_BASE_URL}/device", exception=Exception("Unexpected error"))
-            
+
             result = await flow.async_oauth_create_entry(oauth_data)
 
         assert result["type"] == FlowResultType.ABORT
@@ -189,7 +194,7 @@ class TestEverhomeConfigFlow:
         with aioresponses() as m:
             # Mock successful device fetch
             m.get(f"{API_BASE_URL}/device", payload=mock_devices_response["devices"])
-            
+
             result = await flow.async_oauth_create_entry(oauth_data)
 
         assert result["type"] == FlowResultType.CREATE_ENTRY
@@ -212,7 +217,7 @@ class TestEverhomeConfigFlow:
         with aioresponses() as m:
             # Mock successful device fetch
             m.get(f"{API_BASE_URL}/device", payload=mock_devices_response["devices"])
-            
+
             result = await flow.async_oauth_create_entry(oauth_data)
 
         assert result["type"] == FlowResultType.CREATE_ENTRY

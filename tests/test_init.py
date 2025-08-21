@@ -299,9 +299,7 @@ class TestEverhomeInit:
             patch(
                 "custom_components.everhome.EverhomeDataUpdateCoordinator"
             ) as mock_coordinator_class,
-            patch.object(
-                hass.config_entries, "async_forward_entry_setups"
-            ),
+            patch.object(hass.config_entries, "async_forward_entry_setups"),
         ):
 
             mock_get_impl.return_value = mock_implementation

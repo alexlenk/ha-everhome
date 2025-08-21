@@ -44,7 +44,6 @@ def mock_config_entry() -> MockConfigEntry:
     )
 
 
-
 @pytest.fixture
 def mock_oauth_config() -> Dict[str, Any]:
     """Mock OAuth configuration."""
@@ -220,27 +219,31 @@ async def setup_integration(
         yield mock_config_entry
 
 
-def setup_aiohttp_mock(mock_session, mock_response, method='get'):
+def setup_aiohttp_mock(mock_session, mock_response, method="get"):
     """Helper to setup aiohttp session mock with proper async context manager."""
+
     class MockContextManager:
         async def __aenter__(self):
             return mock_response
+
         async def __aexit__(self, exc_type, exc_val, exc_tb):
             return None
-    
+
     def mock_method(*args, **kwargs):
         return MockContextManager()
-    
-    if method == 'get':
+
+    if method == "get":
         mock_session.get = mock_method
-    elif method == 'post':
+    elif method == "post":
         mock_session.post = mock_method
 
 
 @pytest.fixture
 def mock_aiohttp_session():
     """Mock aiohttp session for API testing."""
-    with patch("homeassistant.helpers.aiohttp_client.async_get_clientsession") as mock_get_session:
+    with patch(
+        "homeassistant.helpers.aiohttp_client.async_get_clientsession"
+    ) as mock_get_session:
         mock_session = AsyncMock()
         mock_get_session.return_value = mock_session
         yield mock_session

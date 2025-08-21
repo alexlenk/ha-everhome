@@ -21,21 +21,23 @@ from custom_components.everhome.coordinator import (
 class TestEverhomeDataUpdateCoordinator:
     """Test Everhome data update coordinator."""
 
-    def _setup_aiohttp_mock(self, mock_auth, mock_response, method='get'):
+    def _setup_aiohttp_mock(self, mock_auth, mock_response, method="get"):
         """Helper to setup aiohttp session mock with proper async context manager."""
+
         class MockContextManager:
             async def __aenter__(self):
                 return mock_response
+
             async def __aexit__(self, exc_type, exc_val, exc_tb):
                 return None
-        
+
         # Create a function that returns the context manager directly
         def mock_method(*args, **kwargs):
             return MockContextManager()
-        
-        if method == 'get':
+
+        if method == "get":
             mock_auth.aiohttp_session.get = mock_method
-        elif method == 'post':
+        elif method == "post":
             mock_auth.aiohttp_session.post = mock_method
 
     @pytest.fixture
@@ -80,7 +82,7 @@ class TestEverhomeDataUpdateCoordinator:
         mock_response.json = AsyncMock(return_value=devices_data)
 
         # Setup aiohttp mock with proper async context manager
-        self._setup_aiohttp_mock(mock_auth, mock_response, 'get')
+        self._setup_aiohttp_mock(mock_auth, mock_response, "get")
 
         result = await coordinator._async_update_data()
 
@@ -125,7 +127,7 @@ class TestEverhomeDataUpdateCoordinator:
         mock_response.text.return_value = "Internal Server Error"
 
         # Setup aiohttp mock with proper async context manager
-        self._setup_aiohttp_mock(mock_auth, mock_response, 'get')
+        self._setup_aiohttp_mock(mock_auth, mock_response, "get")
 
         with pytest.raises(UpdateFailed, match="Failed to get devices: 500"):
             await coordinator._get_devices()
@@ -148,7 +150,7 @@ class TestEverhomeDataUpdateCoordinator:
         mock_response.json = AsyncMock(return_value=devices_data)
 
         # Setup aiohttp mock with proper async context manager
-        self._setup_aiohttp_mock(mock_auth, mock_response, 'get')
+        self._setup_aiohttp_mock(mock_auth, mock_response, "get")
 
         result = await coordinator._get_devices()
 
@@ -175,7 +177,7 @@ class TestEverhomeDataUpdateCoordinator:
         mock_response.status = 200
 
         # Setup aiohttp mock with proper async context manager
-        self._setup_aiohttp_mock(mock_auth, mock_response, 'post')
+        self._setup_aiohttp_mock(mock_auth, mock_response, "post")
 
         result = await coordinator.execute_device_action("device_001", "open")
 
@@ -194,7 +196,7 @@ class TestEverhomeDataUpdateCoordinator:
         mock_response.text.return_value = "Bad Request"
 
         # Setup aiohttp mock with proper async context manager
-        self._setup_aiohttp_mock(mock_auth, mock_response, 'post')
+        self._setup_aiohttp_mock(mock_auth, mock_response, "post")
 
         result = await coordinator.execute_device_action("device_001", "invalid_action")
 
@@ -202,10 +204,11 @@ class TestEverhomeDataUpdateCoordinator:
 
     async def test_execute_device_action_client_error(self, coordinator, mock_auth):
         """Test device action execution with client error."""
+
         # For error tests, we create a function that raises the exception immediately
         def mock_post(*args, **kwargs):
             raise aiohttp.ClientError("Connection failed")
-        
+
         mock_auth.aiohttp_session.post = mock_post
 
         result = await coordinator.execute_device_action("device_001", "open")
@@ -214,10 +217,11 @@ class TestEverhomeDataUpdateCoordinator:
 
     async def test_execute_device_action_timeout_error(self, coordinator, mock_auth):
         """Test device action execution with timeout error."""
-        # For error tests, we create a function that raises the exception immediately  
+
+        # For error tests, we create a function that raises the exception immediately
         def mock_post(*args, **kwargs):
             raise asyncio.TimeoutError()
-        
+
         mock_auth.aiohttp_session.post = mock_post
 
         result = await coordinator.execute_device_action("device_001", "open")
@@ -232,7 +236,7 @@ class TestEverhomeDataUpdateCoordinator:
         mock_response.status = 200
 
         # Setup aiohttp mock with proper async context manager
-        self._setup_aiohttp_mock(mock_auth, mock_response, 'post')
+        self._setup_aiohttp_mock(mock_auth, mock_response, "post")
         mock_auth.async_get_access_token.return_value = "refreshed_token"
 
         await coordinator.execute_device_action("device_001", "close")
@@ -250,7 +254,7 @@ class TestEverhomeDataUpdateCoordinator:
         mock_response.json = AsyncMock(return_value=[])
 
         # Setup aiohttp mock with proper async context manager
-        self._setup_aiohttp_mock(mock_auth, mock_response, 'get')
+        self._setup_aiohttp_mock(mock_auth, mock_response, "get")
 
         result = await coordinator._get_devices()
 
@@ -263,7 +267,7 @@ class TestEverhomeDataUpdateCoordinator:
         mock_response.json = AsyncMock(return_value=[])
 
         # Setup aiohttp mock with proper async context manager
-        self._setup_aiohttp_mock(mock_auth, mock_response, 'get')
+        self._setup_aiohttp_mock(mock_auth, mock_response, "get")
 
         await coordinator._get_devices()
 
@@ -276,7 +280,7 @@ class TestEverhomeDataUpdateCoordinator:
         mock_response.status = 200
 
         # Setup aiohttp mock with proper async context manager
-        self._setup_aiohttp_mock(mock_auth, mock_response, 'post')
+        self._setup_aiohttp_mock(mock_auth, mock_response, "post")
 
         await coordinator.execute_device_action("test_device_123", "stop")
 
@@ -294,7 +298,7 @@ class TestEverhomeDataUpdateCoordinator:
         mock_response.json = AsyncMock(return_value=devices_data)
 
         # Setup aiohttp mock with proper async context manager
-        self._setup_aiohttp_mock(mock_auth, mock_response, 'get')
+        self._setup_aiohttp_mock(mock_auth, mock_response, "get")
 
         # First call
         result1 = await coordinator._get_devices()

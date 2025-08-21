@@ -23,17 +23,12 @@ class TestEverhomeAuth:
         session.async_ensure_token_valid.return_value = None
         return session
 
-
     @pytest.fixture
-    def everhome_auth(
-        self, hass: HomeAssistant, mock_oauth_session
-    ):
+    def everhome_auth(self, hass: HomeAssistant, mock_oauth_session):
         """Create EverhomeAuth fixture."""
         return EverhomeAuth(hass, mock_oauth_session)
 
-    def test_initialization(
-        self, hass: HomeAssistant, mock_oauth_session
-    ):
+    def test_initialization(self, hass: HomeAssistant, mock_oauth_session):
         """Test EverhomeAuth initialization."""
         auth = EverhomeAuth(hass, mock_oauth_session)
 
@@ -168,9 +163,7 @@ class TestEverhomeAuth:
         # Token validation should have been called for each request
         assert mock_oauth_session.async_ensure_token_valid.call_count == 5
 
-    def test_auth_object_state_persistence(
-        self, hass: HomeAssistant
-    ):
+    def test_auth_object_state_persistence(self, hass: HomeAssistant):
         """Test that EverhomeAuth maintains state correctly."""
         mock_oauth_session = AsyncMock(spec=config_entry_oauth2_flow.OAuth2Session)
         mock_oauth_session.token = {"access_token": "persistent_token"}
