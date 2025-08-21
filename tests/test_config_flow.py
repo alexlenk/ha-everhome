@@ -44,11 +44,17 @@ class TestEverhomeConfigFlow:
         mock_response.status = 200
         mock_response.json.return_value = mock_devices_response["devices"]
 
-        # Configure the aiohttp session mock to properly handle async context manager
-        mock_get_context = AsyncMock()
-        mock_get_context.__aenter__ = AsyncMock(return_value=mock_response)
-        mock_get_context.__aexit__ = AsyncMock(return_value=None)
-        mock_aiohttp_session.get.return_value = mock_get_context
+        # Use the same working pattern as coordinator tests
+        class MockContextManager:
+            async def __aenter__(self):
+                return mock_response
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                return None
+        
+        def mock_get(*args, **kwargs):
+            return MockContextManager()
+            
+        mock_aiohttp_session.get = mock_get
 
         # Start the flow
         result = await hass.config_entries.flow.async_init(
@@ -93,11 +99,17 @@ class TestEverhomeConfigFlow:
         mock_response.status = 200
         mock_response.json = AsyncMock(return_value=mock_devices_response["devices"])
 
-        # Configure the aiohttp session mock to properly handle async context manager
-        mock_get_context = AsyncMock()
-        mock_get_context.__aenter__ = AsyncMock(return_value=mock_response)
-        mock_get_context.__aexit__ = AsyncMock(return_value=None)
-        mock_aiohttp_session.get.return_value = mock_get_context
+        # Use the same working pattern as coordinator tests
+        class MockContextManager:
+            async def __aenter__(self):
+                return mock_response
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                return None
+        
+        def mock_get(*args, **kwargs):
+            return MockContextManager()
+            
+        mock_aiohttp_session.get = mock_get
 
         flow = EverhomeFlowHandler()
         flow.hass = hass
@@ -123,11 +135,17 @@ class TestEverhomeConfigFlow:
         mock_response = AsyncMock()
         mock_response.status = 401
 
-        # Configure the aiohttp session mock to properly handle async context manager
-        mock_get_context = AsyncMock()
-        mock_get_context.__aenter__ = AsyncMock(return_value=mock_response)
-        mock_get_context.__aexit__ = AsyncMock(return_value=None)
-        mock_aiohttp_session.get.return_value = mock_get_context
+        # Use the same working pattern as coordinator tests
+        class MockContextManager:
+            async def __aenter__(self):
+                return mock_response
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                return None
+        
+        def mock_get(*args, **kwargs):
+            return MockContextManager()
+            
+        mock_aiohttp_session.get = mock_get
 
         flow = EverhomeFlowHandler()
         flow.hass = hass
@@ -242,11 +260,17 @@ class TestEverhomeConfigFlow:
         mock_response.status = 200
         mock_response.json.return_value = mock_devices_response["devices"]
 
-        # Configure the aiohttp session mock to properly handle async context manager
-        mock_get_context = AsyncMock()
-        mock_get_context.__aenter__ = AsyncMock(return_value=mock_response)
-        mock_get_context.__aexit__ = AsyncMock(return_value=None)
-        mock_aiohttp_session.get.return_value = mock_get_context
+        # Use the same working pattern as coordinator tests
+        class MockContextManager:
+            async def __aenter__(self):
+                return mock_response
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                return None
+        
+        def mock_get(*args, **kwargs):
+            return MockContextManager()
+            
+        mock_aiohttp_session.get = mock_get
 
         flow = EverhomeFlowHandler()
         flow.hass = hass
@@ -274,11 +298,17 @@ class TestEverhomeConfigFlow:
         mock_response.status = 200
         mock_response.json.return_value = mock_devices_response["devices"]
 
-        # Configure the aiohttp session mock to properly handle async context manager
-        mock_get_context = AsyncMock()
-        mock_get_context.__aenter__ = AsyncMock(return_value=mock_response)
-        mock_get_context.__aexit__ = AsyncMock(return_value=None)
-        mock_aiohttp_session.get.return_value = mock_get_context
+        # Use the same working pattern as coordinator tests
+        class MockContextManager:
+            async def __aenter__(self):
+                return mock_response
+            async def __aexit__(self, exc_type, exc_val, exc_tb):
+                return None
+        
+        def mock_get(*args, **kwargs):
+            return MockContextManager()
+            
+        mock_aiohttp_session.get = mock_get
 
         flow = EverhomeFlowHandler()
         flow.hass = hass
