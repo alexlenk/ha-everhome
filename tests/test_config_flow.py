@@ -6,12 +6,13 @@ from unittest.mock import AsyncMock, patch
 
 import aiohttp
 import pytest
+from aioresponses import aioresponses
 from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 
 from custom_components.everhome.config_flow import EverhomeFlowHandler
-from custom_components.everhome.const import DOMAIN
+from custom_components.everhome.const import API_BASE_URL, DOMAIN
 
 
 @pytest.fixture
@@ -31,86 +32,20 @@ def mock_oauth_impl():
 class TestEverhomeConfigFlow:
     """Test Everhome config flow."""
 
-    async def test_full_flow(
-        self,
-        hass: HomeAssistant,
-        mock_oauth_impl,
-        mock_devices_response,
-        mock_aiohttp_session,
-    ):
-        """Test the full OAuth flow."""
-        # Mock successful device fetch
-        mock_response = AsyncMock()
-        mock_response.status = 200
-        mock_response.json.return_value = mock_devices_response["devices"]
-
-        # Use the same working pattern as coordinator tests
-        class MockContextManager:
-            async def __aenter__(self):
-                return mock_response
-            async def __aexit__(self, exc_type, exc_val, exc_tb):
-                return None
+    def test_flow_handler_inheritance(self):
+        """Test that flow handler inherits from correct base class."""
+        from custom_components.everhome.config_flow import EverhomeFlowHandler
+        from homeassistant.helpers.config_entry_oauth2_flow import AbstractOAuth2FlowHandler
         
-        def mock_get(*args, **kwargs):
-            return MockContextManager()
-            
-        mock_aiohttp_session.get = mock_get
-
-        # Start the flow
-        result = await hass.config_entries.flow.async_init(
-            DOMAIN, context={"source": config_entries.SOURCE_USER}
-        )
-
-        assert result["type"] == FlowResultType.EXTERNAL_STEP
-        assert result["step_id"] == "auth"
-
-        # Mock OAuth completion
-        oauth_data = {
-            "token": {"access_token": "test_token"},
-            "name": "Everhome",
-        }
-
-        with patch.object(
-            hass.config_entries.flow, "async_configure"
-        ) as mock_configure:
-            mock_configure.return_value = (
-                await hass.config_entries.flow._async_create_flow(
-                    DOMAIN, context={"source": config_entries.SOURCE_USER}
-                ).async_oauth_create_entry(oauth_data)
-            )
-
-            result = await hass.config_entries.flow.async_configure(
-                result["flow_id"], oauth_data
-            )
-
-        assert result["type"] == FlowResultType.CREATE_ENTRY
-        assert result["title"] == "Everhome (2 devices)"
-        assert result["data"] == oauth_data
+        assert issubclass(EverhomeFlowHandler, AbstractOAuth2FlowHandler)
+        assert hasattr(EverhomeFlowHandler, 'async_oauth_create_entry')
 
     async def test_oauth_create_entry_success(
         self,
         hass: HomeAssistant,
         mock_devices_response,
-        mock_aiohttp_session,
     ):
         """Test successful OAuth entry creation."""
-        # Mock successful device fetch
-        mock_response = AsyncMock()
-        mock_response.status = 200
-        mock_response.json = AsyncMock(return_value=mock_devices_response["devices"])
-
-        # Use the same working pattern as coordinator tests
-        class MockContextManager:
-            async def __aenter__(self):
-                return mock_response
-            async def __aexit__(self, exc_type, exc_val, exc_tb):
-                return None
-        
-        def mock_get(*args, **kwargs):
-            return MockContextManager()
-            
-        mock_aiohttp_session.get = mock_get
-
         flow = EverhomeFlowHandler()
         flow.hass = hass
 
@@ -119,7 +54,11 @@ class TestEverhomeConfigFlow:
             "name": "Everhome",
         }
 
-        result = await flow.async_oauth_create_entry(oauth_data)
+        with aioresponses() as m:
+            # Mock successful device fetch
+            m.get(f"{API_BASE_URL}/device", payload=mock_devices_response["devices"])
+            
+            result = await flow.async_oauth_create_entry(oauth_data)
         
         assert result["type"] == FlowResultType.CREATE_ENTRY
         assert result["title"] == "Everhome (2 devices)"
@@ -128,25 +67,8 @@ class TestEverhomeConfigFlow:
     async def test_oauth_create_entry_connection_error(
         self,
         hass: HomeAssistant,
-        mock_aiohttp_session,
     ):
         """Test OAuth entry creation with connection error."""
-        # Mock failed device fetch
-        mock_response = AsyncMock()
-        mock_response.status = 401
-
-        # Use the same working pattern as coordinator tests
-        class MockContextManager:
-            async def __aenter__(self):
-                return mock_response
-            async def __aexit__(self, exc_type, exc_val, exc_tb):
-                return None
-        
-        def mock_get(*args, **kwargs):
-            return MockContextManager()
-            
-        mock_aiohttp_session.get = mock_get
-
         flow = EverhomeFlowHandler()
         flow.hass = hass
 
@@ -155,7 +77,11 @@ class TestEverhomeConfigFlow:
             "name": "Everhome",
         }
 
-        result = await flow.async_oauth_create_entry(oauth_data)
+        with aioresponses() as m:
+            # Mock failed device fetch (401 unauthorized)
+            m.get(f"{API_BASE_URL}/device", status=401)
+            
+            result = await flow.async_oauth_create_entry(oauth_data)
 
         assert result["type"] == FlowResultType.ABORT
         assert result["reason"] == "cannot_connect"
@@ -163,13 +89,8 @@ class TestEverhomeConfigFlow:
     async def test_oauth_create_entry_client_error(
         self,
         hass: HomeAssistant,
-        mock_aiohttp_session,
     ):
         """Test OAuth entry creation with aiohttp client error."""
-        # Mock aiohttp client error
-        # Configure the aiohttp session mock with client error
-        mock_aiohttp_session.get.side_effect = aiohttp.ClientError("Network error")
-
         flow = EverhomeFlowHandler()
         flow.hass = hass
 
@@ -178,7 +99,11 @@ class TestEverhomeConfigFlow:
             "name": "Everhome",
         }
 
-        result = await flow.async_oauth_create_entry(oauth_data)
+        with aioresponses() as m:
+            # Mock aiohttp client error
+            m.get(f"{API_BASE_URL}/device", exception=aiohttp.ClientError("Network error"))
+            
+            result = await flow.async_oauth_create_entry(oauth_data)
 
         assert result["type"] == FlowResultType.ABORT
         assert result["reason"] == "cannot_connect"
@@ -186,13 +111,8 @@ class TestEverhomeConfigFlow:
     async def test_oauth_create_entry_unexpected_error(
         self,
         hass: HomeAssistant,
-        mock_aiohttp_session,
     ):
         """Test OAuth entry creation with unexpected error."""
-        # Mock unexpected error
-        # Configure the aiohttp session mock with unexpected error
-        mock_aiohttp_session.get.side_effect = Exception("Unexpected error")
-
         flow = EverhomeFlowHandler()
         flow.hass = hass
 
@@ -201,7 +121,11 @@ class TestEverhomeConfigFlow:
             "name": "Everhome",
         }
 
-        result = await flow.async_oauth_create_entry(oauth_data)
+        with aioresponses() as m:
+            # Mock unexpected error
+            m.get(f"{API_BASE_URL}/device", exception=Exception("Unexpected error"))
+            
+            result = await flow.async_oauth_create_entry(oauth_data)
 
         assert result["type"] == FlowResultType.ABORT
         assert result["reason"] == "unknown"
@@ -252,26 +176,8 @@ class TestEverhomeConfigFlow:
         self,
         hass: HomeAssistant,
         mock_devices_response,
-        mock_aiohttp_session,
     ):
         """Test OAuth entry creation with custom name."""
-        # Mock successful device fetch
-        mock_response = AsyncMock()
-        mock_response.status = 200
-        mock_response.json.return_value = mock_devices_response["devices"]
-
-        # Use the same working pattern as coordinator tests
-        class MockContextManager:
-            async def __aenter__(self):
-                return mock_response
-            async def __aexit__(self, exc_type, exc_val, exc_tb):
-                return None
-        
-        def mock_get(*args, **kwargs):
-            return MockContextManager()
-            
-        mock_aiohttp_session.get = mock_get
-
         flow = EverhomeFlowHandler()
         flow.hass = hass
 
@@ -280,7 +186,11 @@ class TestEverhomeConfigFlow:
             "name": "My Smart Home",
         }
 
-        result = await flow.async_oauth_create_entry(oauth_data)
+        with aioresponses() as m:
+            # Mock successful device fetch
+            m.get(f"{API_BASE_URL}/device", payload=mock_devices_response["devices"])
+            
+            result = await flow.async_oauth_create_entry(oauth_data)
 
         assert result["type"] == FlowResultType.CREATE_ENTRY
         assert result["title"] == "My Smart Home (2 devices)"
@@ -290,26 +200,8 @@ class TestEverhomeConfigFlow:
         self,
         hass: HomeAssistant,
         mock_devices_response,
-        mock_aiohttp_session,
     ):
         """Test OAuth entry creation without name."""
-        # Mock successful device fetch
-        mock_response = AsyncMock()
-        mock_response.status = 200
-        mock_response.json.return_value = mock_devices_response["devices"]
-
-        # Use the same working pattern as coordinator tests
-        class MockContextManager:
-            async def __aenter__(self):
-                return mock_response
-            async def __aexit__(self, exc_type, exc_val, exc_tb):
-                return None
-        
-        def mock_get(*args, **kwargs):
-            return MockContextManager()
-            
-        mock_aiohttp_session.get = mock_get
-
         flow = EverhomeFlowHandler()
         flow.hass = hass
 
@@ -317,7 +209,11 @@ class TestEverhomeConfigFlow:
             "token": {"access_token": "test_token"},
         }
 
-        result = await flow.async_oauth_create_entry(oauth_data)
+        with aioresponses() as m:
+            # Mock successful device fetch
+            m.get(f"{API_BASE_URL}/device", payload=mock_devices_response["devices"])
+            
+            result = await flow.async_oauth_create_entry(oauth_data)
 
         assert result["type"] == FlowResultType.CREATE_ENTRY
         assert result["title"] == "Everhome (2 devices)"

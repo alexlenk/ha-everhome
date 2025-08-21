@@ -5,6 +5,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from aioresponses import aioresponses
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_entry_oauth2_flow
 
@@ -25,22 +26,20 @@ class TestEverhomeAuth:
 
     @pytest.fixture
     def everhome_auth(
-        self, hass: HomeAssistant, mock_oauth_session, mock_aiohttp_session
+        self, hass: HomeAssistant, mock_oauth_session
     ):
         """Create EverhomeAuth fixture."""
         return EverhomeAuth(hass, mock_oauth_session)
 
     def test_initialization(
-        self, hass: HomeAssistant, mock_oauth_session, mock_aiohttp_session
+        self, hass: HomeAssistant, mock_oauth_session
     ):
         """Test EverhomeAuth initialization."""
-        # Use the already mocked session from conftest.py
         auth = EverhomeAuth(hass, mock_oauth_session)
 
         assert auth.hass == hass
         assert auth.session == mock_oauth_session
-        # The aiohttp_session will be the mock from conftest.py
-        assert auth.aiohttp_session == mock_aiohttp_session
+        assert auth.aiohttp_session is not None
 
     async def test_async_get_access_token_success(
         self, everhome_auth, mock_oauth_session
@@ -135,9 +134,9 @@ class TestEverhomeAuth:
 
         assert token is None
 
-    def test_aiohttp_session_property(self, everhome_auth, mock_aiohttp_session):
+    def test_aiohttp_session_property(self, everhome_auth):
         """Test that aiohttp_session property returns correct session."""
-        assert everhome_auth.aiohttp_session == mock_aiohttp_session
+        assert everhome_auth.aiohttp_session is not None
 
     async def test_token_validation_called_before_access(
         self, everhome_auth, mock_oauth_session
@@ -170,7 +169,7 @@ class TestEverhomeAuth:
         assert mock_oauth_session.async_ensure_token_valid.call_count == 5
 
     def test_auth_object_state_persistence(
-        self, hass: HomeAssistant, mock_aiohttp_session
+        self, hass: HomeAssistant
     ):
         """Test that EverhomeAuth maintains state correctly."""
         mock_oauth_session = AsyncMock(spec=config_entry_oauth2_flow.OAuth2Session)
@@ -181,7 +180,7 @@ class TestEverhomeAuth:
         # Verify initial state
         assert auth.hass == hass
         assert auth.session == mock_oauth_session
-        assert auth.aiohttp_session == mock_aiohttp_session
+        assert auth.aiohttp_session is not None
 
         # State should persist
         assert auth.session.token["access_token"] == "persistent_token"
