@@ -22,21 +22,23 @@ PYTHONPATH="$PWD" pytest tests/ --cov=custom_components.everhome --cov-report=te
 
 ### Code Quality
 ```bash
+# Black and isort are not installed globally — use the ecowitt_local venv:
+BLACK=/Users/alexlenk/Github/ecowitt_local/.venv/bin/black
+ISORT=/Users/alexlenk/Github/ecowitt_local/.venv/bin/isort
+
+# ALWAYS run before committing to avoid CI failures:
+$BLACK custom_components/ tests/
+$ISORT custom_components/ tests/
+
 # Type checking (mypy.ini is the authoritative config — do NOT edit [tool.mypy] in pyproject.toml)
 mypy custom_components/everhome/
-
-# Code formatting
-black custom_components/ tests/
-
-# Import sorting
-isort custom_components/ tests/
 
 # Linting
 flake8 custom_components/ tests/
 
-# Run all quality checks (same as CI)
-black --check --diff custom_components/ tests/
-isort --check --diff custom_components/ tests/
+# Check-only (same as CI)
+$BLACK --check --diff custom_components/ tests/
+$ISORT --check --diff custom_components/ tests/
 mypy custom_components/everhome/
 flake8 custom_components/ tests/
 ```
