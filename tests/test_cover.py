@@ -273,7 +273,7 @@ class TestEverhomeCover:
         """Test is_opening property."""
         device_data = {
             "id": "device_001",
-            "state": "opening",
+            "states": {"general": "opening"},
         }
         mock_coordinator.data["device_001"] = device_data
         cover = EverhomeCover(mock_coordinator, "device_001", device_data)
@@ -281,14 +281,14 @@ class TestEverhomeCover:
         assert cover.is_opening is True
 
         # Test non-opening state
-        device_data["state"] = "stopped"
+        device_data["states"]["general"] = "up"
         assert cover.is_opening is False
 
     def test_is_closing_property(self, mock_coordinator):
         """Test is_closing property."""
         device_data = {
             "id": "device_001",
-            "state": "closing",
+            "states": {"general": "closing"},
         }
         mock_coordinator.data["device_001"] = device_data
         cover = EverhomeCover(mock_coordinator, "device_001", device_data)
@@ -296,7 +296,7 @@ class TestEverhomeCover:
         assert cover.is_closing is True
 
         # Test non-closing state
-        device_data["state"] = "stopped"
+        device_data["states"]["general"] = "down"
         assert cover.is_closing is False
 
     def test_current_cover_position_with_position(self, mock_coordinator):
