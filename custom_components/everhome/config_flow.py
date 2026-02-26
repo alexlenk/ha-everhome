@@ -50,7 +50,9 @@ class EverhomeFlowHandler(config_entry_oauth2_flow.AbstractOAuth2FlowHandler):
 
         try:
             headers = {"Authorization": f"Bearer {access_token}"}
-            async with session.get(f"{API_BASE_URL}{API_DEVICE_URL}", headers=headers) as resp:
+            async with session.get(
+                f"{API_BASE_URL}{API_DEVICE_URL}", headers=headers
+            ) as resp:
                 if resp.status != 200:
                     return self.async_abort(reason="cannot_connect")
                 devices = await resp.json()
