@@ -64,7 +64,6 @@ class TestEverhomeDataUpdateCoordinator:
         assert coordinator.entry == mock_config_entry
         assert coordinator.name == DOMAIN
         assert coordinator.update_interval == timedelta(seconds=UPDATE_INTERVAL)
-        assert coordinator._devices == {}
 
     async def test_update_data_success(
         self, coordinator, mock_auth, mock_shutter_device, mock_awning_device

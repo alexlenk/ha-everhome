@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Optional
+from typing import Any, Optional, cast
 
 from homeassistant.components.cover import (
     ATTR_POSITION,
@@ -105,8 +105,7 @@ class EverhomeCover(CoordinatorEntity, CoverEntity):
     @property
     def device_data(self) -> dict[str, Any]:
         """Return the device data."""
-        device_data = self.coordinator.data.get(self._device_id, {})
-        return device_data  # type: ignore[no-any-return]
+        return cast(dict[str, Any], self.coordinator.data.get(self._device_id, {}))
 
     @property
     def available(self) -> bool:
@@ -144,14 +143,12 @@ class EverhomeCover(CoordinatorEntity, CoverEntity):
     @property
     def is_opening(self) -> bool:
         """Return if the cover is opening."""
-        state = self.device_data.get("state")
-        return state == STATE_OPENING
+        return bool(self.device_data.get("states", {}).get("general") == STATE_OPENING)
 
     @property
     def is_closing(self) -> bool:
         """Return if the cover is closing."""
-        state = self.device_data.get("state")
-        return state == STATE_CLOSING
+        return bool(self.device_data.get("states", {}).get("general") == STATE_CLOSING)
 
     @property
     def is_open(self) -> bool | None:
@@ -219,11 +216,11 @@ class EverhomeCover(CoordinatorEntity, CoverEntity):
                 await self.coordinator.execute_device_action(
                     self._device_id, "set_position", {"position": position}
                 )
+                await self.coordinator.async_request_refresh()
             else:
-                # Fallback to open/close based on position
+                # Fallback to open/close based on position.
+                # These methods already call async_request_refresh internally.
                 if position > 50:
                     await self.async_open_cover()
                 else:
                     await self.async_close_cover()
-
-            await self.coordinator.async_request_refresh()
