@@ -8,7 +8,6 @@ from typing import Any, Optional
 from aiohttp.client_exceptions import ClientError
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
     UpdateFailed,
@@ -36,7 +35,6 @@ class EverhomeDataUpdateCoordinator(DataUpdateCoordinator):
         self.auth = auth
         self.hass = hass
         self.entry = entry
-        self._devices: dict[str, Any] = {}
 
         super().__init__(
             hass,
@@ -50,8 +48,6 @@ class EverhomeDataUpdateCoordinator(DataUpdateCoordinator):
         try:
             # Get all devices
             return await self._get_devices()
-        except ConfigEntryAuthFailed as err:
-            raise ConfigEntryAuthFailed from err
         except (ClientError, asyncio.TimeoutError) as err:
             raise UpdateFailed(f"Error communicating with API: {err}") from err
 
@@ -105,7 +101,7 @@ class EverhomeDataUpdateCoordinator(DataUpdateCoordinator):
             async with self.auth.aiohttp_session.post(
                 url, headers=headers, json=data
             ) as resp:
-                if resp.status != 200:
+                if resp.status >= 400:
                     _LOGGER.error(
                         "Failed to execute action %s on device %s: %s",
                         action,
