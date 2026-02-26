@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.5.2](https://github.com/alexlenk/ha-everhome/compare/v0.5.1...v0.5.2) (2026-02-26)
+
+
+### Bug Fixes
+
+* code review improvements and project documentation ([ac23dff](https://github.com/alexlenk/ha-everhome/commit/ac23dff7c86c805bfd7be3dca5aae01cc03972eb))
+* resolve mypy error in config flow handler inheritance ([c54b6d9](https://github.com/alexlenk/ha-everhome/commit/c54b6d913774226e7e08ca8decd3da0b2a06f378))
+
 ## [0.4.3](https://github.com/alexlenk/ha-everhome/compare/v0.4.2...v0.4.3) (2026-02-21)
 
 
