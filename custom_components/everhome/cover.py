@@ -143,12 +143,12 @@ class EverhomeCover(CoordinatorEntity, CoverEntity):
     @property
     def is_opening(self) -> bool:
         """Return if the cover is opening."""
-        return self.device_data.get("states", {}).get("general") == STATE_OPENING
+        return bool(self.device_data.get("states", {}).get("general") == STATE_OPENING)
 
     @property
     def is_closing(self) -> bool:
         """Return if the cover is closing."""
-        return self.device_data.get("states", {}).get("general") == STATE_CLOSING
+        return bool(self.device_data.get("states", {}).get("general") == STATE_CLOSING)
 
     @property
     def is_open(self) -> bool | None:
