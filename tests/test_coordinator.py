@@ -69,11 +69,12 @@ class TestEverhomeDataUpdateCoordinator:
         self, coordinator, mock_auth, mock_shutter_device, mock_awning_device
     ):
         """Test successful data update."""
-        # Mock API response with shutter devices
+        # Mock API response with a mix of supported and unsupported devices
         devices_data = [
             {**mock_shutter_device, "subtype": "shutter"},
             {**mock_awning_device, "subtype": "awning"},
-            {"id": "light_001", "subtype": "light"},  # Should be filtered out
+            {"id": "light_001", "subtype": "light"},
+            {"id": "socket_001", "subtype": "socket"},  # Not yet supported
         ]
 
         mock_response = AsyncMock()
@@ -85,11 +86,11 @@ class TestEverhomeDataUpdateCoordinator:
 
         result = await coordinator._async_update_data()
 
-        # Should only include shutter-type devices
-        assert len(result) == 2
+        assert len(result) == 3
         assert "shutter_001" in result
         assert "awning_001" in result
-        assert "light_001" not in result
+        assert "light_001" in result
+        assert "socket_001" not in result
 
         # Verify API was called correctly
         mock_auth.async_get_access_token.assert_called_once()
@@ -146,8 +147,9 @@ class TestEverhomeDataUpdateCoordinator:
             {"id": "motion_001", "subtype": "motiondetector"},
             {"id": "smoke_001", "subtype": "smokedetector"},
             {"id": "water_001", "subtype": "waterdetector"},
-            # Unsupported subtypes — must be excluded
+            # Light subtype
             {"id": "light_001", "subtype": "light"},
+            # Unsupported subtypes — must be excluded
             {"id": "socket_001", "subtype": "socket"},
             {"id": "no_subtype", "name": "No subtype device"},
         ]
@@ -171,12 +173,12 @@ class TestEverhomeDataUpdateCoordinator:
             "motion_001",
             "smoke_001",
             "water_001",
+            "light_001",
         ]
-        assert len(result) == 10
+        assert len(result) == 11
         for device_id in expected_included:
             assert device_id in result
 
-        assert "light_001" not in result
         assert "socket_001" not in result
         assert "no_subtype" not in result
 
