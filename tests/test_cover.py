@@ -104,7 +104,7 @@ class TestEverhomeCover:
         device_data = {
             "id": "garage_001",
             "name": "Garage Door",
-            "subtype": "garage_door",
+            "subtype": "garagedoor",
             "states": {"general": "down"},
         }
         cover = EverhomeCover(mock_coordinator, "garage_001", device_data)

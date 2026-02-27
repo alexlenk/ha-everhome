@@ -73,7 +73,7 @@ class EverhomeDataUpdateCoordinator(DataUpdateCoordinator):
                     "blind",
                     "awning",
                     "curtain",
-                    "garage_door",
+                    "garagedoor",
                 ]:
                     shutter_devices[device["id"]] = device
 

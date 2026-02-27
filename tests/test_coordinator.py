@@ -138,7 +138,7 @@ class TestEverhomeDataUpdateCoordinator:
             {"id": "blind_001", "subtype": "blind"},
             {"id": "awning_001", "subtype": "awning"},
             {"id": "curtain_001", "subtype": "curtain"},
-            {"id": "garage_001", "subtype": "garage_door"},
+            {"id": "garage_001", "subtype": "garagedoor"},
             {"id": "light_001", "subtype": "light"},
             {"id": "switch_001", "subtype": "switch"},
             {"id": "no_subtype", "name": "No subtype device"},

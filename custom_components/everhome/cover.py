@@ -66,7 +66,7 @@ class EverhomeCover(CoordinatorEntity, CoverEntity):
         self._attr_unique_id = f"{DOMAIN}_{entry_id}_{device_id}"
         # Set appropriate device class based on subtype
         subtype = device_data.get("subtype", "shutter")
-        if subtype == "garage_door":
+        if subtype == "garagedoor":
             self._attr_device_class = CoverDeviceClass.GARAGE
         elif subtype in ["blind", "curtain"]:
             self._attr_device_class = CoverDeviceClass.BLIND
@@ -91,7 +91,7 @@ class EverhomeCover(CoordinatorEntity, CoverEntity):
         )
 
         # Set appropriate icon based on device type
-        if subtype == "garage_door":
+        if subtype == "garagedoor":
             self._attr_icon = "mdi:garage"
         elif subtype == "blind":
             self._attr_icon = "mdi:blinds"
