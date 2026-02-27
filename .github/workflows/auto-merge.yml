@@ -12,39 +12,32 @@ permissions:
 jobs:
   auto-merge:
     runs-on: ubuntu-latest
-    # Only run after auto-pr succeeds on a claude/release-* branch
-    if: |
-      github.event.workflow_run.conclusion == 'success' &&
-      startsWith(github.event.workflow_run.head_branch, 'claude/release-')
+    # head_branch here is "main" (the branch auto-pr.yml itself ran on),
+    # not the original claude/release-* branch — so we skip the branch check
+    # and rely on the PR title guard in the step instead.
+    if: github.event.workflow_run.conclusion == 'success'
 
     steps:
       - name: Find and merge release PR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          BRANCH="${{ github.event.workflow_run.head_branch }}"
-          echo "Looking for release PR from branch: $BRANCH"
+          echo "Looking for open Release v* PR targeting main"
 
           PR_NUMBER=$(gh pr list \
-            --head "$BRANCH" \
             --base main \
             --state open \
-            --json number \
-            --jq '.[0].number // empty' \
+            --json number,title \
+            --jq '[.[] | select(.title | test("^Release v"))] | .[0].number // empty' \
             --repo "${{ github.repository }}")
 
           if [ -z "$PR_NUMBER" ]; then
-            echo "⏭️ No open PR found for branch $BRANCH - skipping"
+            echo "⏭️ No open release PR found - skipping"
             exit 0
           fi
 
           PR_TITLE=$(gh pr view "$PR_NUMBER" --json title --jq '.title' --repo "${{ github.repository }}")
           echo "Found PR #$PR_NUMBER: $PR_TITLE"
-
-          if ! echo "$PR_TITLE" | grep -qE "^Release v"; then
-            echo "⏭️ PR #$PR_NUMBER is not a release PR - skipping"
-            exit 0
-          fi
 
           echo "✅ Merging release PR #$PR_NUMBER"
           gh pr merge "$PR_NUMBER" \
