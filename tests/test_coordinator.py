@@ -132,15 +132,23 @@ class TestEverhomeDataUpdateCoordinator:
             await coordinator._get_devices()
 
     async def test_get_devices_filters_device_types(self, coordinator, mock_auth):
-        """Test that get_devices properly filters device types."""
+        """Test that get_devices includes all supported subtypes and excludes others."""
         devices_data = [
+            # Cover subtypes
             {"id": "shutter_001", "subtype": "shutter"},
             {"id": "blind_001", "subtype": "blind"},
             {"id": "awning_001", "subtype": "awning"},
             {"id": "curtain_001", "subtype": "curtain"},
             {"id": "garage_001", "subtype": "garagedoor"},
+            # Binary sensor subtypes
+            {"id": "door_001", "subtype": "door"},
+            {"id": "window_001", "subtype": "window"},
+            {"id": "motion_001", "subtype": "motiondetector"},
+            {"id": "smoke_001", "subtype": "smokedetector"},
+            {"id": "water_001", "subtype": "waterdetector"},
+            # Unsupported subtypes — must be excluded
             {"id": "light_001", "subtype": "light"},
-            {"id": "switch_001", "subtype": "switch"},
+            {"id": "socket_001", "subtype": "socket"},
             {"id": "no_subtype", "name": "No subtype device"},
         ]
 
@@ -148,26 +156,28 @@ class TestEverhomeDataUpdateCoordinator:
         mock_response.status = 200
         mock_response.json = AsyncMock(return_value=devices_data)
 
-        # Setup aiohttp mock with proper async context manager
         self._setup_aiohttp_mock(mock_auth, mock_response, "get")
 
         result = await coordinator._get_devices()
 
-        # Should only include shutter-type devices
-        expected_devices = [
+        expected_included = [
             "shutter_001",
             "blind_001",
             "awning_001",
             "curtain_001",
             "garage_001",
+            "door_001",
+            "window_001",
+            "motion_001",
+            "smoke_001",
+            "water_001",
         ]
-        assert len(result) == 5
-        for device_id in expected_devices:
+        assert len(result) == 10
+        for device_id in expected_included:
             assert device_id in result
 
-        # Should not include non-shutter devices
         assert "light_001" not in result
-        assert "switch_001" not in result
+        assert "socket_001" not in result
         assert "no_subtype" not in result
 
     async def test_execute_device_action_success(self, coordinator, mock_auth):
