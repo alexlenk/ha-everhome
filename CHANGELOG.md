@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.6.0](https://github.com/alexlenk/ha-everhome/compare/v0.5.1...v0.6.0) (2026-02-27)
+
+
+### Features
+
+* add `binary_sensor` platform for door, window, motion, smoke, and water detector devices
+* add `light` platform with on/off and brightness control (ColorMode.BRIGHTNESS / ONOFF based on device capabilities)
+* add `switch` platform for smart sockets (OUTLET) and irrigation valves (SWITCH)
+* add automated CI workflows: auto-pr, auto-merge, auto-release (mirrored from ecowitt_local)
+
+
+### Bug Fixes
+
+* correct `garagedoor` subtype string to match Everhome API (was `garage_door` — devices were silently dropped)
+
+
+### Documentation
+
+* update README to clarify only the cover platform has been tested with real hardware
+
+
 ## [0.4.3](https://github.com/alexlenk/ha-everhome/compare/v0.4.2...v0.4.3) (2026-02-21)
 
 
