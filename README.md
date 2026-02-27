@@ -7,32 +7,30 @@
 [![Test][test-shield]][test]
 [![codecov][codecov-shield]][codecov]
 
-_Integration to control Everhome shutter-type devices in Home Assistant._
+_Integration to control Everhome devices in Home Assistant._
 
 ## About Everhome
 
-[Everhome](https://everhome.cloud) is a cloud-based smart home platform that supports various device manufacturers and protocols. While Everhome is compatible with multiple device types including lighting, sensors, and other smart home products, **this integration focuses specifically on shutter-type devices** such as shutters, blinds, awnings, and curtains.
+[Everhome](https://everhome.cloud) is a cloud-based smart home platform that supports various device manufacturers and protocols (433 MHz, 868 MHz, ZigBee).
 
 ## Supported Device Categories
 
-This integration supports all shutter-type devices connected to the Everhome platform, including:
+**This component will set up the following platforms:**
 
-- **Shutters** - Motorized window shutters from various manufacturers
-- **Blinds** - Motorized window blinds and venetian blinds  
-- **Awnings** - Outdoor shade awnings and retractable canopies
-- **Curtains** - Motorized curtain and drape systems
+| Platform | Description | Hardware tested |
+| -------- | ----------- | --------------- |
+| `cover`  | Shutters, blinds, awnings, curtains, and garage doors | ✅ Yes |
+| `binary_sensor` | Door/window contacts, motion, smoke, and water detectors | ⚠️ No — API-based only |
+| `light` | On/off and dimmable lights | ⚠️ No — API-based only |
+| `switch` | Smart sockets and irrigation valves | ⚠️ No — API-based only |
+
+> **Note:** Only the `cover` platform has been tested with real hardware (Jarolift motors via Everhome CloudBox). The `binary_sensor`, `light`, and `switch` platforms are implemented based on the Everhome API documentation and have not been verified against physical devices. If you own Everhome-compatible sensors, lights, or sockets and can test them, please open an issue or pull request with feedback.
 
 ### Tested Brands and Motors
 
 The integration has been tested and verified with:
 - **[Jarolift](https://www.jarolift.de/)** - German manufacturer of tubular motors and drive systems
 - **Other Everhome-compatible** shutter motor brands
-
-**This component will set up the following platforms:**
-
-| Platform | Description |
-| -------- | ----------- |
-| `cover`  | Control shutters, blinds, awnings, curtains, and garage doors |
 
 ## Features
 
@@ -207,17 +205,19 @@ Contributions are welcome! Please read the [contributing guidelines](CONTRIBUTIN
 ## Roadmap
 
 ### Planned Features
-- **Enhanced Testing Framework** - Comprehensive test coverage across device types
 - **CI/CD Pipeline** - Automated testing and releases ✅ (Completed)
-- **Additional Shutter Features** - Advanced positioning and scene integration
-- **Group Control** - Synchronized operation of multiple shutter devices
+- **Binary Sensors** - Door/window contacts, motion, smoke, water detectors ✅ (Completed, untested on hardware)
+- **Lights** - On/off and dimmable light control ✅ (Completed, untested on hardware)
+- **Switches** - Smart sockets and irrigation valves ✅ (Completed, untested on hardware)
+- **Climate** - Heating/cooling thermostat support
+- **Sensors** - Energy meters, solar inverters, environment sensors
+- **Group Control** - Synchronized operation of multiple devices
 - **Advanced Diagnostics** - Better error reporting and device health monitoring
 
 ### Future Considerations
-- **Additional Device Types** - Support for other Everhome products (lights, sensors, etc.)
 - **Local API Support** - If Everhome provides local connectivity options
-- **Battery Monitoring** - For battery-powered shutter systems
-- **Scene Integration** - Predefined position scenes for different times of day
+- **Scene Integration** - Predefined scenes for different times of day
+- **Camera** - IP camera stream support (blocked on undocumented stream URL)
 
 ## Credits
 

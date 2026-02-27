@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from homeassistant.core import HomeAssistant
@@ -23,13 +23,19 @@ class TestEverhomeAuth:
         return session
 
     @pytest.fixture
-    def everhome_auth(self, hass: HomeAssistant, mock_oauth_session):
+    async def everhome_auth(self, hass: HomeAssistant, mock_oauth_session):
         """Create EverhomeAuth fixture."""
-        return EverhomeAuth(hass, mock_oauth_session)
+        with patch("custom_components.everhome.api.async_get_clientsession"):
+            yield EverhomeAuth(hass, mock_oauth_session)
 
-    def test_initialization(self, hass: HomeAssistant, mock_oauth_session):
+    async def test_initialization(self, hass: HomeAssistant, mock_oauth_session):
         """Test EverhomeAuth initialization."""
-        auth = EverhomeAuth(hass, mock_oauth_session)
+        mock_session = AsyncMock()
+        with patch(
+            "custom_components.everhome.api.async_get_clientsession",
+            return_value=mock_session,
+        ):
+            auth = EverhomeAuth(hass, mock_oauth_session)
 
         assert auth.hass == hass
         assert auth.session == mock_oauth_session
@@ -162,12 +168,13 @@ class TestEverhomeAuth:
         # Token validation should have been called for each request
         assert mock_oauth_session.async_ensure_token_valid.call_count == 5
 
-    def test_auth_object_state_persistence(self, hass: HomeAssistant):
+    async def test_auth_object_state_persistence(self, hass: HomeAssistant):
         """Test that EverhomeAuth maintains state correctly."""
         mock_oauth_session = AsyncMock(spec=config_entry_oauth2_flow.OAuth2Session)
         mock_oauth_session.token = {"access_token": "persistent_token"}
 
-        auth = EverhomeAuth(hass, mock_oauth_session)
+        with patch("custom_components.everhome.api.async_get_clientsession"):
+            auth = EverhomeAuth(hass, mock_oauth_session)
 
         # Verify initial state
         assert auth.hass == hass

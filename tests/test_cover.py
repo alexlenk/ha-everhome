@@ -104,7 +104,7 @@ class TestEverhomeCover:
         device_data = {
             "id": "garage_001",
             "name": "Garage Door",
-            "subtype": "garage_door",
+            "subtype": "garagedoor",
             "states": {"general": "down"},
         }
         cover = EverhomeCover(mock_coordinator, "garage_001", device_data)
@@ -268,6 +268,14 @@ class TestEverhomeCover:
         # Test position < threshold
         device_data["position"] = 90
         assert cover.is_open is False
+
+    def test_is_open_property_unknown_state(self, mock_coordinator):
+        """Test is_open returns None when no state and no position."""
+        device_data = {"id": "device_001"}
+        mock_coordinator.data["device_001"] = device_data
+        cover = EverhomeCover(mock_coordinator, "device_001", device_data)
+
+        assert cover.is_open is None
 
     def test_is_opening_property(self, mock_coordinator):
         """Test is_opening property."""

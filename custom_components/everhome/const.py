@@ -1,7 +1,22 @@
 """Constants for the Everhome integration."""
 
 DOMAIN = "everhome"
-PLATFORMS = ["cover"]
+PLATFORMS = ["cover", "binary_sensor", "light", "switch"]
+
+# Device subtypes grouped by platform
+COVER_SUBTYPES = {"shutter", "blind", "awning", "curtain", "garagedoor"}
+BINARY_SENSOR_SUBTYPES = {
+    "door",
+    "window",
+    "motiondetector",
+    "smokedetector",
+    "waterdetector",
+}
+LIGHT_SUBTYPES = {"light"}
+SWITCH_SUBTYPES = {"socket", "watering"}
+SUPPORTED_SUBTYPES = (
+    COVER_SUBTYPES | BINARY_SENSOR_SUBTYPES | LIGHT_SUBTYPES | SWITCH_SUBTYPES
+)
 
 # Configuration
 CONF_CLIENT_ID = "client_id"

@@ -19,6 +19,7 @@ from .const import (
     API_DEVICE_EXECUTE_URL,
     API_DEVICE_URL,
     DOMAIN,
+    SUPPORTED_SUBTYPES,
     UPDATE_INTERVAL,
 )
 
@@ -65,19 +66,13 @@ class EverhomeDataUpdateCoordinator(DataUpdateCoordinator):
 
             devices = await resp.json()
 
-            # Filter for shutter-type devices
-            shutter_devices = {}
+            # Filter for supported device subtypes across all platforms
+            supported_devices = {}
             for device in devices:
-                if device.get("subtype") in [
-                    "shutter",
-                    "blind",
-                    "awning",
-                    "curtain",
-                    "garage_door",
-                ]:
-                    shutter_devices[device["id"]] = device
+                if device.get("subtype") in SUPPORTED_SUBTYPES:
+                    supported_devices[device["id"]] = device
 
-            return shutter_devices
+            return supported_devices
 
     async def execute_device_action(
         self,

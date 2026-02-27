@@ -1,0 +1,165 @@
+name: Auto PR for Claude Branches
+
+on:
+  workflow_run:
+    workflows: ["Test"]  # Trigger on Test workflow completion
+    types: [completed]
+    branches:
+      - 'claude/**'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-pr:
+    runs-on: ubuntu-latest
+    # Only run if CI succeeded on a claude/ branch
+    if: |
+      github.event.workflow_run.conclusion == 'success' &&
+      startsWith(github.event.workflow_run.head_branch, 'claude/')
+
+    steps:
+      - name: Check if branch still exists
+        id: check-branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BRANCH="${{ github.event.workflow_run.head_branch }}"
+          ENCODED_BRANCH="${BRANCH//\//%2F}"
+          if gh api "repos/${{ github.repository }}/branches/${ENCODED_BRANCH}" --silent 2>/dev/null; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "✅ Branch $BRANCH exists"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "⏭️ Branch $BRANCH no longer exists (already merged or deleted) - skipping"
+          fi
+
+      - name: Checkout code
+        if: steps.check-branch.outputs.exists == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
+          fetch-depth: 0
+
+      - name: Check if PR already exists
+        if: steps.check-branch.outputs.exists == 'true'
+        id: check-pr
+        run: |
+          BRANCH_NAME="${{ github.event.workflow_run.head_branch }}"
+          PR_EXISTS=$(gh pr list --head "$BRANCH_NAME" --base main --json number --jq length)
+          echo "exists=$PR_EXISTS" >> $GITHUB_OUTPUT
+          echo "branch=$BRANCH_NAME" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Determine PR title and check version (release branches)
+        id: pr-meta
+        if: steps.check-branch.outputs.exists == 'true' && steps.check-pr.outputs.exists == '0'
+        run: |
+          BRANCH="${{ github.event.workflow_run.head_branch }}"
+
+          if echo "$BRANCH" | grep -q "^claude/release-"; then
+            # Release branch — use version from manifest
+            VERSION=$(jq -r '.version' custom_components/everhome/manifest.json)
+            git fetch origin main
+            MAIN_VERSION=$(git show origin/main:custom_components/everhome/manifest.json | jq -r '.version')
+
+            if [ "$VERSION" == "$MAIN_VERSION" ]; then
+              echo "skip=true" >> $GITHUB_OUTPUT
+              echo "⚠️ Version $VERSION unchanged from main — skipping PR"
+            else
+              echo "skip=false" >> $GITHUB_OUTPUT
+              echo "title=Release v${VERSION}" >> $GITHUB_OUTPUT
+              echo "is_release=true" >> $GITHUB_OUTPUT
+              echo "version=$VERSION" >> $GITHUB_OUTPUT
+              echo "✅ Release branch: v$MAIN_VERSION → v$VERSION"
+            fi
+          else
+            # Feature branch — always create PR, derive title from branch name
+            TITLE=$(echo "$BRANCH" | sed 's|claude/||' | sed 's|-| |g' | sed 's/\b\w/\u&/g')
+            echo "skip=false" >> $GITHUB_OUTPUT
+            echo "title=${TITLE}" >> $GITHUB_OUTPUT
+            echo "is_release=false" >> $GITHUB_OUTPUT
+            echo "✅ Feature branch: '$TITLE'"
+          fi
+
+      - name: Extract release notes from CHANGELOG (release branches only)
+        id: changelog
+        if: |
+          steps.check-branch.outputs.exists == 'true' &&
+          steps.check-pr.outputs.exists == '0' &&
+          steps.pr-meta.outputs.skip == 'false' &&
+          steps.pr-meta.outputs.is_release == 'true'
+        run: |
+          VERSION="${{ steps.pr-meta.outputs.version }}"
+          if [ -f CHANGELOG.md ]; then
+            awk "/## \[$VERSION\]/,/## \[/" CHANGELOG.md | head -n -1 > /tmp/release_notes.md
+          else
+            echo "Release v${VERSION}" > /tmp/release_notes.md
+          fi
+
+      - name: Create Pull Request
+        if: |
+          steps.check-branch.outputs.exists == 'true' &&
+          steps.check-pr.outputs.exists == '0' &&
+          steps.pr-meta.outputs.skip == 'false'
+        run: |
+          BRANCH="${{ steps.check-pr.outputs.branch }}"
+          TITLE="${{ steps.pr-meta.outputs.pr_title }}"
+          IS_RELEASE="${{ steps.pr-meta.outputs.is_release }}"
+
+          # Override title from env (avoids shell escaping issues)
+          TITLE="${PR_TITLE}"
+
+          cat > /tmp/pr_body.md << 'EOF'
+          ## 🤖 Automated PR
+
+          This PR was automatically created by GitHub Actions after all CI checks passed.
+
+          EOF
+
+          if [ "$IS_RELEASE" == "true" ]; then
+            if [ -f /tmp/release_notes.md ]; then
+              cat /tmp/release_notes.md >> /tmp/pr_body.md
+            fi
+            cat >> /tmp/pr_body.md << 'EOF'
+
+          ---
+
+          ### ✅ Pre-merge Checklist
+          - [x] All CI tests passing
+          - [x] Version bumped in manifest.json
+          - [x] CHANGELOG.md updated
+
+          ### 🚀 Post-merge Actions
+          After merging, GitHub Actions will automatically:
+          - Create git tag
+          - Create GitHub Release (HACS will detect it)
+          EOF
+          else
+            cat >> /tmp/pr_body.md << 'EOF'
+
+          ---
+
+          ### ✅ CI Status
+          - [x] All tests passing
+          - [x] Type checking (mypy) passing
+          - [x] Linting (flake8) passing
+          - [x] Coverage ≥ 85%
+          EOF
+          fi
+
+          if gh pr create \
+            --base main \
+            --head "$BRANCH" \
+            --title "$TITLE" \
+            --body-file /tmp/pr_body.md 2>/dev/null; then
+            echo "✅ PR created: $TITLE"
+          else
+            echo "⚠️ PR creation failed — may already exist"
+            exit 0
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_TITLE: ${{ steps.pr-meta.outputs.title }}
