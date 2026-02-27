@@ -269,6 +269,14 @@ class TestEverhomeCover:
         device_data["position"] = 90
         assert cover.is_open is False
 
+    def test_is_open_property_unknown_state(self, mock_coordinator):
+        """Test is_open returns None when no state and no position."""
+        device_data = {"id": "device_001"}
+        mock_coordinator.data["device_001"] = device_data
+        cover = EverhomeCover(mock_coordinator, "device_001", device_data)
+
+        assert cover.is_open is None
+
     def test_is_opening_property(self, mock_coordinator):
         """Test is_opening property."""
         device_data = {

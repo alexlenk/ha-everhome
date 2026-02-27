@@ -74,7 +74,8 @@ class TestEverhomeDataUpdateCoordinator:
             {**mock_shutter_device, "subtype": "shutter"},
             {**mock_awning_device, "subtype": "awning"},
             {"id": "light_001", "subtype": "light"},
-            {"id": "socket_001", "subtype": "socket"},  # Not yet supported
+            {"id": "socket_001", "subtype": "socket"},
+            {"id": "speaker_001", "subtype": "speaker"},  # Not supported
         ]
 
         mock_response = AsyncMock()
@@ -86,11 +87,12 @@ class TestEverhomeDataUpdateCoordinator:
 
         result = await coordinator._async_update_data()
 
-        assert len(result) == 3
+        assert len(result) == 4
         assert "shutter_001" in result
         assert "awning_001" in result
         assert "light_001" in result
-        assert "socket_001" not in result
+        assert "socket_001" in result
+        assert "speaker_001" not in result
 
         # Verify API was called correctly
         mock_auth.async_get_access_token.assert_called_once()
@@ -149,8 +151,11 @@ class TestEverhomeDataUpdateCoordinator:
             {"id": "water_001", "subtype": "waterdetector"},
             # Light subtype
             {"id": "light_001", "subtype": "light"},
-            # Unsupported subtypes — must be excluded
+            # Switch subtypes
             {"id": "socket_001", "subtype": "socket"},
+            {"id": "watering_001", "subtype": "watering"},
+            # Unsupported subtypes — must be excluded
+            {"id": "speaker_001", "subtype": "speaker"},
             {"id": "no_subtype", "name": "No subtype device"},
         ]
 
@@ -174,12 +179,14 @@ class TestEverhomeDataUpdateCoordinator:
             "smoke_001",
             "water_001",
             "light_001",
+            "socket_001",
+            "watering_001",
         ]
-        assert len(result) == 11
+        assert len(result) == 13
         for device_id in expected_included:
             assert device_id in result
 
-        assert "socket_001" not in result
+        assert "speaker_001" not in result
         assert "no_subtype" not in result
 
     async def test_execute_device_action_success(self, coordinator, mock_auth):
@@ -196,6 +203,19 @@ class TestEverhomeDataUpdateCoordinator:
 
         # Verify API call
         mock_auth.async_get_access_token.assert_called_once()
+
+    async def test_execute_device_action_with_params(self, coordinator, mock_auth):
+        """Test device action execution with extra params (e.g. set_position)."""
+        mock_response = AsyncMock()
+        mock_response.status = 200
+
+        self._setup_aiohttp_mock(mock_auth, mock_response, "post")
+
+        result = await coordinator.execute_device_action(
+            "device_001", "set_position", {"position": 50}
+        )
+
+        assert result is True
 
         # Call arguments verification removed (function mock doesn't support call_args)
         # Test verifies functionality by checking return value
