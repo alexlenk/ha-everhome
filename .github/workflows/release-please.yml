@@ -1,10 +1,7 @@
 name: Release Please
 
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:  # Manual trigger also available
+  workflow_dispatch:  # Disabled automatic trigger — releases now handled by auto-release.yml
 
 permissions:
   contents: write
