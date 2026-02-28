@@ -78,7 +78,7 @@ All state reads use `device_data.get("states", {}).get("general")` — the neste
 | Workflow | Trigger | Purpose |
 |---|---|---|
 | `test.yml` | push to `main`/`dev`/`claude/**`, PRs to `main`, manual | Tests, type check, lint, HACS/Hassfest validation |
-| `release-please.yml` | push to `main`, manual | Automated release PR creation via release-please |
+| `release-please.yml` | manual only (disabled) | Legacy — replaced by auto-release.yml |
 | `release.yml` | GitHub release published | Final validation on release |
 | `hacs-validation.yml` | push/PR to `main`, daily, manual | HACS validation |
 | `hassfest.yml` | push/PR to `main`, daily, manual | Hassfest validation |
@@ -91,66 +91,36 @@ After pushing changes on a `claude/**` branch:
 
 ## Release Process
 
-This project uses [release-please](https://github.com/googleapis/release-please) for automated releases. Commit messages must follow [Conventional Commits](https://www.conventionalcommits.org/).
+Releases are fully automated via `auto-pr.yml` → `auto-merge.yml` → `auto-release.yml`.
 
-### Commit Message Format
-```
-<type>: <description>
-
-Types that appear in CHANGELOG:
-  feat / feature  → Features
-  fix             → Bug Fixes
-  perf            → Performance Improvements
-  refactor        → Code Refactoring
-  deps            → Dependencies
-  docs            → Documentation
-
-Types hidden in CHANGELOG (still trigger releases):
-  test, build, ci, style, chore, revert
-```
-
-### Automated Release Flow
-1. **Work on `claude/**` branch** — commit with conventional commits
-2. **CI runs automatically** on `claude/**` branches — fix any failures
-3. **Merge to `main`** (via PR)
-4. **release-please triggers** on push to `main`:
-   - Creates a Release PR that bumps version in `CHANGELOG.md` and `.release-please-manifest.json`
-   - When Release PR is merged: creates GitHub Release + git tag (`v0.5.1`)
-   - `release-please.yml` also updates `manifest.json` version on release
-5. **HACS detects** new release via the git tag
-
-### Version Files (keep in sync)
-| File | Field |
-|---|---|
-| `custom_components/everhome/manifest.json` | `"version"` |
-| `pyproject.toml` | `version` under `[project]` |
-| `.release-please-manifest.json` | `"."` |
-
-release-please manages `manifest.json` and `.release-please-manifest.json` automatically on release. Keep `pyproject.toml` in sync manually when bumping versions.
-
-### Manual Release (fallback)
+### To cut a release (e.g. v0.7.0):
 ```bash
-# 1. Update versions in all three files above
-# 2. Update CHANGELOG.md
-# 3. Commit and push
-git add custom_components/everhome/manifest.json pyproject.toml .release-please-manifest.json CHANGELOG.md
-git commit -m "chore: release v0.5.2"
-git push origin claude/release-v0.5.2
+git checkout main && git pull origin main
+git checkout -b claude/release-v0.7.0
 
-# 4. Merge to main, then tag
-git tag -a v0.5.2 -m "Release v0.5.2"
-git push origin v0.5.2
+# 1. Bump version in manifest.json
+# 2. Add entry to CHANGELOG.md under ## [0.7.0]
 
-# 5. Create GitHub Release
-gh release create v0.5.2 --title "v0.5.2 - <title>" --notes-file CHANGELOG.md --latest
+git add custom_components/everhome/manifest.json CHANGELOG.md
+git commit -m "chore: release v0.7.0"
+git push -u origin claude/release-v0.7.0
 ```
+
+### Automated chain (fully hands-off after push):
+1. `Test` CI runs on `claude/release-v0.7.0`
+2. **auto-pr** creates PR titled "Release v0.7.0" → triggers auto-merge
+3. **auto-merge** finds and merges any open "Release v*" PR to main
+4. **auto-release** creates git tag `v0.7.0` + GitHub Release
+5. **HACS** detects the new release via the tag
+
+### Version file
+Only `custom_components/everhome/manifest.json` needs to be bumped. `pyproject.toml` and `.release-please-manifest.json` are no longer kept in sync.
 
 ### Release Checklist
 - [ ] All CI tests passing (≥85% coverage)
-- [ ] Version bumped in `manifest.json`, `pyproject.toml`, `.release-please-manifest.json`
-- [ ] `CHANGELOG.md` updated
-- [ ] GitHub Release created with tag `vX.Y.Z`
-- [ ] HACS validation passing
+- [ ] Version bumped in `manifest.json`
+- [ ] `CHANGELOG.md` updated with `## [X.Y.Z]` section
+- [ ] Pushed to `claude/release-vX.Y.Z` branch
 
 ## HACS Requirements
 - Git tags must follow `vX.Y.Z` format
