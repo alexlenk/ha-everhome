@@ -4,9 +4,9 @@
   "codeowners": ["@alexlenk"],
   "config_flow": true,
   "dependencies": ["application_credentials"],
-  "documentation": "https://github.com/alexlenk/everhome",
+  "documentation": "https://github.com/alexlenk/ha-everhome",
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/alexlenk/everhome/issues",
+  "issue_tracker": "https://github.com/alexlenk/ha-everhome/issues",
   "requirements": [],
   "version": "0.6.1"
 }
