@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.1](https://github.com/alexlenk/ha-everhome/compare/v0.6.0...v0.6.1) (2026-02-28)
+
+
+### Documentation
+
+* add brand icons locally to suppress HACS validation annotation
+
+
 ## [0.6.0](https://github.com/alexlenk/ha-everhome/compare/v0.5.1...v0.6.0) (2026-02-27)
 
 
