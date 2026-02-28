@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.2](https://github.com/alexlenk/ha-everhome/compare/v0.6.1...v0.6.2) (2026-02-28)
+
+
+### Bug Fixes
+
+* correct documentation and issue_tracker URLs in manifest.json (were pointing to non-existent repo)
+
+
 ## [0.6.1](https://github.com/alexlenk/ha-everhome/compare/v0.6.0...v0.6.1) (2026-02-28)
 
 
