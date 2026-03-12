@@ -14,10 +14,9 @@ from .const import API_BASE_URL, API_DEVICE_URL, DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 
-class EverhomeFlowHandler(config_entry_oauth2_flow.AbstractOAuth2FlowHandler):
+class ConfigFlow(config_entry_oauth2_flow.AbstractOAuth2FlowHandler, domain=DOMAIN):
     """Config flow to handle Everhome OAuth2 authentication."""
 
-    DOMAIN = DOMAIN
     VERSION = 1
 
     # Allow multiple config entries
