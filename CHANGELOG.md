@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.6.3](https://github.com/alexlenk/ha-everhome/compare/v0.6.2...v0.6.3) (2026-03-12)
+
+
+### Bug Fixes
+
+* rename config flow handler class to ConfigFlow for proper registration - fixes "Flow handler not found for entry Everhome" error
+
+
 ## [0.6.2](https://github.com/alexlenk/ha-everhome/compare/v0.6.1...v0.6.2) (2026-02-28)
 
 
