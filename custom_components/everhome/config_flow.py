@@ -19,6 +19,7 @@ class ConfigFlow(  # type: ignore[call-arg]
 ):
     """Config flow to handle Everhome OAuth2 authentication."""
 
+    DOMAIN = DOMAIN
     VERSION = 1
 
     @property
