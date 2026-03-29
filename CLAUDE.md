@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code when working with code in this repository.
 
+> For autonomous agent operating procedures (issue triage, release workflow, CI monitoring), see [AGENT_SYSTEM_PROMPT.md](./AGENT_SYSTEM_PROMPT.md).
+
 ## Project Overview
 
 Home Assistant custom integration for Everhome shutter/cover control via OAuth2 cloud API. The integration supports shutters, blinds, awnings, curtains, and garage doors as HA cover entities.
@@ -51,26 +53,42 @@ pip install -r requirements_test.txt
 ## Architecture
 
 ### Core Files
-- `__init__.py` — Entry setup/unload; validates OAuth token, creates coordinator, forwards to cover platform
+- `__init__.py` — Entry setup/unload; validates OAuth token, creates coordinator, forwards to all platforms
 - `api.py` — `EverhomeAuth`: wraps OAuth2Session, provides `async_get_access_token()` and `aiohttp_session`
-- `coordinator.py` — `EverhomeDataUpdateCoordinator`: polls `/device` every 5 minutes, filters for cover subtypes, executes device actions
-- `cover.py` — `EverhomeCover` entity: reads from coordinator data, sends actions via coordinator
+- `coordinator.py` — `EverhomeDataUpdateCoordinator`: polls `/device` every 5 minutes, filters for supported subtypes, executes device actions
+- `cover.py` — `EverhomeCover` entity (shutters, blinds, awnings, curtains, garage doors)
+- `binary_sensor.py` — `EverhomeBinarySensor` entity (door, window, motion, smoke, water sensors)
+- `light.py` — `EverhomeLight` entity (dimmable and on/off lights)
+- `switch.py` — `EverhomeSwitch` entity (sockets, watering)
 - `config_flow.py` — OAuth2 config flow; validates credentials by fetching device list
 - `application_credentials.py` — Provides OAuth2 authorize/token URLs
-- `const.py` — All constants (URLs, states, actions, domain)
+- `const.py` — All constants (URLs, states, actions, domain, subtype sets per platform)
+
+### Platforms and Device Subtypes
+| Platform | Subtypes |
+|---|---|
+| `cover` | `shutter`, `blind`, `awning`, `curtain`, `garagedoor` |
+| `binary_sensor` | `door`, `window`, `motiondetector`, `smokedetector`, `waterdetector` |
+| `light` | `light` |
+| `switch` | `socket`, `watering` |
 
 ### API Data Structure
 Devices are returned as a flat JSON array from `GET /device`. Each device has:
 - `id` — unique device identifier
-- `subtype` — one of: `shutter`, `blind`, `awning`, `curtain`, `garage_door`
+- `subtype` — determines which platform handles the device (see table above)
 - `name` — display name
-- `states.general` — current state: `"up"` (open), `"down"` (closed), `"opening"`, `"closing"`
-- `position` — integer 0–100 (optional)
-- `capabilities` — list of supported actions (e.g., `["set_position"]`)
+- `states.general` — current state (varies by platform)
+- `position` — integer 0–100 (covers only, optional)
+- `capabilities` — list of supported actions (e.g., `["set_position"]`, `["set_brightness"]`)
 - `model`, `firmware_version` — device info
 
 ### State Field Convention
-All state reads use `device_data.get("states", {}).get("general")` — the nested `states.general` field. The flat `state` field is NOT used. Values: `"up"`, `"down"`, `"opening"`, `"closing"`.
+- Covers: `states.general` = `"up"` (open) / `"down"` (closed) / `"opening"` / `"closing"`
+- Lights/switches: `states.general` = `"on"` / `"off"`
+- Contact sensors (`door`, `window`): `states.state` = `"open"` / `"closed"`
+- Motion/smoke/water sensors: `states.general` = `"on"` / `"off"`
+
+The flat `state` field is NOT used.
 
 ## CI / GitHub Actions
 
