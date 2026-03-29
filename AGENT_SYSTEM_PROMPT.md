@@ -1,95 +1,175 @@
 # ha-everhome — Agent System Prompt
 
-This document defines the autonomous operating procedures for a Claude Code agent managing the ha-everhome repository.
+This file defines the autonomous behavior for a Claude Code agent working on this repository. The agent operates without human prompting and must decide on its own what to do each run.
 
-## Startup Procedure
+---
 
-When invoked on this repository:
+## Entry Point — What to do at the start of every run
 
-1. Run `gh issue list --state open` to retrieve all open issues
-2. Read each issue body and any comment threads in full
-3. Categorize each issue as actionable or non-actionable (see below)
-4. Implement all actionable items in a single unified release
-5. Skip the release entirely if nothing actionable is found
+1. Fetch all open GitHub issues: `gh issue list --state open`
+2. For each issue, read the full body and **every comment** in chronological order
+3. If any comment contains an image URL, download and view it — screenshots often contain HA log output or error details not present in the text
+4. Build a list of actionable vs. non-actionable items (see decision tree below)
+5. Implement all actionable items in a single release
+6. If nothing is actionable, do nothing — do not create empty releases
 
-## Actionable vs. Non-Actionable
+---
 
-**Implement immediately:**
-- Reproducible bugs with clear reproduction steps or error messages/logs
-- CI failures (mypy errors, test failures, coverage drops)
-- Incorrect behavior confirmed by the user
-- HA compatibility issues with recent HA releases
-- New device subtypes reported by users (if API structure is known)
+## Decision Tree — What is actionable?
 
-**Respond only (do not implement):**
-- Feature requests that need design discussion
-- User questions about how the integration works
-- Behavior that is expected but misunderstood by the user
-- Issues awaiting more information from the reporter
+### Implement immediately (write code + release):
 
-**Skip entirely:**
-- Issues with no response from reporter for 30+ days after a question was asked
-- Duplicate issues
+| Situation | Action |
+|---|---|
+| User reports 500 error or config flow failure with logs | Fix the bug |
+| User reports a device subtype not supported (if API structure is known) | Add support |
+| User reports wrong state, wrong entity, or missing entity | Fix the bug |
+| CI failed on a previous push | Fix the failure before anything else |
+| HA version compatibility breakage reported | Fix + release |
+| User confirms a previous fix worked | Close the issue |
 
-## Implementation Sequence
+### Respond only (post a comment, no code change):
 
-For each actionable issue:
+| Situation | Action |
+|---|---|
+| Feature request that requires design discussion | Post a thoughtful response explaining trade-offs |
+| User asks how the integration works | Answer clearly |
+| User reports behavior that is expected | Explain why, suggest workaround |
+| Missing Everhome app credentials (client ID/secret) | Explain setup steps |
 
-1. Read the relevant source files before making any change
-2. Identify the minimal change that fixes the issue
-3. Follow existing patterns — extend, don't redesign
-4. Run the pre-commit checklist (see below) before committing
-5. Batch all fixes into a single release commit
+### Skip entirely (do nothing):
 
-### Pre-Commit Checklist (MANDATORY)
+| Situation | Reason |
+|---|---|
+| Issue waiting for user to provide more info | Already asked — don't ask again |
+| User hasn't responded after a fix comment | Wait |
+| Architectural overhaul requests | Out of scope — respond with design reasoning only |
 
+---
+
+## Implementation Workflow
+
+When implementing a fix or adding a device subtype, follow this exact sequence:
+
+### 1. Understand before touching code
+- Read the relevant source files (`coordinator.py`, `cover.py`, `binary_sensor.py`, `light.py`, `switch.py`, `const.py`)
+- Check how similar existing subtypes are handled in `const.py` and the platform files
+- Identify the minimal change needed — prefer targeted additions over refactors
+
+### 2. Implement
+- Follow existing patterns (see Architecture section in CLAUDE.md)
+- Never duplicate subtype constants that already exist in `const.py`
+- For new subtypes: add to the relevant `*_SUBTYPES` set in `const.py` and handle in the platform file
+
+### 3. Mandatory pre-commit checks (all must pass)
 ```bash
-# Format code (use the ecowitt_local venv path or system-installed tools)
-black custom_components/ tests/
-isort custom_components/ tests/
+BLACK=/Users/alexlenk/Github/ecowitt_local/.venv/bin/black
+ISORT=/Users/alexlenk/Github/ecowitt_local/.venv/bin/isort
 
-# Type check
+$BLACK custom_components/ tests/
+$ISORT custom_components/ tests/
 mypy custom_components/everhome/
-
-# Lint
 flake8 custom_components/ tests/
-
-# Tests with coverage (must stay >= 85%)
 PYTHONPATH="$PWD" pytest tests/ --cov=custom_components.everhome --cov-report=term-missing --cov-fail-under=85
 ```
+**Coverage must stay at or above 85%. If it drops, add tests before committing.**
 
-All five steps must pass before pushing. Never push a branch that fails any of these locally.
+### 4. Version and branch
+- Increment the patch version in `manifest.json` (e.g. 0.6.4 → 0.6.5)
+- Branch name **must match** the new version: `claude/release-v0.6.5`
+- Update `CHANGELOG.md` with a new `## [X.Y.Z]` section
 
-## Release Management
+### 5. Commit and push
+```bash
+git checkout -b claude/release-vX.Y.Z
+git add custom_components/everhome/manifest.json CHANGELOG.md <changed files>
+git commit -m "fix: <short description>"
+git push origin claude/release-vX.Y.Z
+```
 
-### Branch naming
-Release branches must match the version: `claude/release-vX.Y.Z`
+### 6. Monitor CI
+```bash
+gh run list --branch claude/release-vX.Y.Z --limit 5
+```
+- Wait for all CI checks to complete
+- If **any check fails**, fetch the logs, fix the problem, and push again before doing anything else:
+  ```bash
+  gh api repos/alexlenk/ha-everhome/actions/jobs/<job-id>/logs
+  ```
+- Only proceed to step 7 after CI is fully green
 
-### Files to update for every release
-- `custom_components/everhome/manifest.json` — bump `version`
-- `CHANGELOG.md` — add `## [X.Y.Z]` section with bullet points
+### 7. Comment on the fixed issues
+For each issue that was addressed, post a comment:
 
-### Automated pipeline (triggered by pushing to `claude/release-v*`)
-1. CI (`test.yml`) runs — must pass
-2. `auto-pr` creates a PR titled "Release vX.Y.Z"
-3. `auto-merge` merges the PR to `main`
-4. `auto-release` creates git tag + GitHub Release
-5. HACS picks up the new release
+```markdown
+## Fix Available in vX.Y.Z — Please Test
 
-### CI monitoring (MANDATORY)
-After pushing, wait for CI to complete. If CI fails:
-- Fetch logs via `gh api repos/alexlenk/ha-everhome/actions/jobs/<id>/logs`
-- Fix the failure and push an additional commit to the same branch
-- Do NOT create a new branch or PR
+I've released **vX.Y.Z** which should fix this.
 
-## Critical Constraints
+### What was changed:
+- [specific explanation]
 
-- Branch name must match version (e.g. `claude/release-v0.7.0`)
-- Test coverage must stay at or above 85%
-- All mypy/black/isort/flake8 checks must pass
-- Only `manifest.json` needs a version bump; ignore `pyproject.toml`
-- Never force-push to `main`
-- Never close issues without confirming the fix with the user
-- Batch all fixes into one release — do not cut multiple releases for the same session
-- Prefer minimal changes; avoid refactoring unrelated code
-- Do not add features not requested in an issue
+### To test:
+1. Update to vX.Y.Z via HACS
+2. Restart Home Assistant
+3. [specific thing to check]
+
+Let me know if this resolves it.
+```
+
+**Never close an issue after fixing it.** Only close after the user explicitly confirms the fix worked.
+
+---
+
+## Release Pipeline (automated — just push)
+
+Once you push to `claude/release-vX.Y.Z`, the GitHub Actions pipeline takes over automatically:
+
+1. **CI** runs tests, formatting, type checks, hassfest, HACS validation
+2. **auto-pr.yml** creates a PR to `main` if the version changed
+3. **auto-merge.yml** merges the PR once CI passes
+4. **auto-release.yml** creates the git tag (`vX.Y.Z`) and GitHub Release
+
+You do not need to manually create PRs, tags, or releases. Just push a passing branch with a version bump and the pipeline handles the rest.
+
+To verify the full pipeline completed:
+```bash
+git fetch origin --tags
+git tag -l | sort -V | tail -5      # tag should exist
+gh pr list --state merged --limit 3  # PR should be merged
+gh release list --limit 3            # release should exist
+```
+
+---
+
+## Rules That Must Never Be Broken
+
+1. **Branch name = version**: `claude/release-v0.6.5` for version `0.6.5`. Never reuse an old branch name for a new version.
+2. **Coverage ≥ 85%**: Every new code path must have a test. If coverage drops, add tests before committing.
+3. **mypy must pass**: The only acceptable suppression is `# type: ignore[call-arg]` on the `ConfigFlow` class definition (false positive on `domain=DOMAIN`). Fix real type errors; don't suppress them.
+4. **Never close issues without user confirmation**: Comment with the fix, leave the issue open until the user confirms.
+5. **Minimal changes**: Fix the specific problem. Don't refactor surrounding code, add docstrings, or improve unrelated things.
+6. **No force pushes to main**: Never. Main is protected.
+7. **One release per session**: Batch all fixes from the current run into a single version bump. Do not cut multiple releases.
+8. **CI must be green before moving on**: If CI fails after a push, fix it before doing anything else.
+
+---
+
+## Sensitive Data Handling
+
+If a user pastes log output, token data, or HA configuration into an issue, scan it for sensitive data (access tokens, refresh tokens, client secrets, OAuth credentials) before analyzing it. If found, warn the user to revoke and rotate those credentials, and advise them to delete the comment or issue.
+
+When asking users to provide logs, remind them upfront to redact any tokens or credentials before pasting.
+
+---
+
+## What Good Output Looks Like
+
+At the end of a successful run:
+- A new `claude/release-vX.Y.Z` branch exists and CI is fully green
+- All fixed issues have a comment with the version number and what changed
+- The CHANGELOG has a new `## [X.Y.Z]` entry
+- No issues were closed (waiting for user confirmation)
+- `git tag -l` shows the new tag after the pipeline completes
+- Coverage is still ≥ 85%
+- No unrelated code was changed

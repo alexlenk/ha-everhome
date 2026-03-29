@@ -6,7 +6,7 @@ This file provides guidance to Claude Code when working with code in this reposi
 
 ## Project Overview
 
-Home Assistant custom integration for Everhome shutter/cover control via OAuth2 cloud API. The integration supports shutters, blinds, awnings, curtains, and garage doors as HA cover entities.
+Home Assistant custom integration for Everhome shutter/cover control via OAuth2 cloud API. The integration supports shutters, blinds, awnings, curtains, garage doors, lights, switches, and binary sensors as HA entities.
 
 ## Development Commands
 
@@ -22,28 +22,32 @@ PYTHONPATH="$PWD" pytest tests/test_cover.py -v
 PYTHONPATH="$PWD" pytest tests/ --cov=custom_components.everhome --cov-report=term-missing --cov-fail-under=85
 ```
 
-### Code Quality
+### ⚠️ Mandatory Pre-Commit Checklist
+
+Run ALL of these before every commit. CI will fail if any step is skipped.
+
 ```bash
 # Black and isort are not installed globally — use the ecowitt_local venv:
 BLACK=/Users/alexlenk/Github/ecowitt_local/.venv/bin/black
 ISORT=/Users/alexlenk/Github/ecowitt_local/.venv/bin/isort
 
-# ALWAYS run before committing to avoid CI failures:
+# 1. Format
 $BLACK custom_components/ tests/
+
+# 2. Sort imports
 $ISORT custom_components/ tests/
 
-# Type checking (mypy.ini is the authoritative config — do NOT edit [tool.mypy] in pyproject.toml)
+# 3. Type check (mypy.ini is the authoritative config)
 mypy custom_components/everhome/
 
-# Linting
+# 4. Lint
 flake8 custom_components/ tests/
 
-# Check-only (same as CI)
-$BLACK --check --diff custom_components/ tests/
-$ISORT --check --diff custom_components/ tests/
-mypy custom_components/everhome/
-flake8 custom_components/ tests/
+# 5. Tests with coverage (must stay >= 85%)
+PYTHONPATH="$PWD" pytest tests/ --cov=custom_components.everhome --cov-report=term-missing --cov-fail-under=85
 ```
+
+All five steps must pass before pushing. Never push a branch that fails any of these locally.
 
 ### Install Dependencies
 ```bash
@@ -104,8 +108,12 @@ The flat `state` field is NOT used.
 ### CI Monitoring (MANDATORY)
 After pushing changes on a `claude/**` branch:
 1. Wait for CI to complete on the branch
-2. If CI fails, analyze failures and fix before merging
-3. All tests must pass and coverage must stay above 85%
+2. If CI fails, fetch the logs and fix before merging:
+   ```bash
+   gh run list --branch <branch> --limit 5
+   gh api repos/alexlenk/ha-everhome/actions/jobs/<job-id>/logs
+   ```
+3. All tests must pass and coverage must stay at or above 85%
 
 ## Release Process
 
@@ -131,6 +139,14 @@ git push -u origin claude/release-v0.7.0
 4. **auto-release** creates git tag `v0.7.0` + GitHub Release
 5. **HACS** detects the new release via the tag
 
+### Verify the full pipeline completed:
+```bash
+git fetch origin --tags
+git tag -l | sort -V | tail -5      # tag should exist
+gh pr list --state merged --limit 3  # PR should be merged
+gh release list --limit 3            # release should exist
+```
+
 ### Version file
 Only `custom_components/everhome/manifest.json` needs to be bumped. `pyproject.toml` and `.release-please-manifest.json` are no longer kept in sync.
 
@@ -148,3 +164,33 @@ Only `custom_components/everhome/manifest.json` needs to be bumped. `pyproject.t
 
 ## mypy Configuration
 `mypy.ini` is the authoritative mypy config — it takes precedence over `[tool.mypy]` in `pyproject.toml` (which has been removed). `mypy.ini` includes critical per-module ignores for `homeassistant.*` and `pytest_homeassistant_custom_component.*` to avoid false errors from unresolvable HA source types.
+
+Known acceptable suppression: `# type: ignore[call-arg]` on the `ConfigFlow` class definition to silence the false-positive mypy error on `domain=DOMAIN`.
+
+## Issue Management Protocol
+
+### Reading Issues
+Always read the full issue body **and all comments** in chronological order. If a comment contains an image URL, download and view it — screenshots often contain HA log output or error details not present in the text.
+
+### After Implementing a Fix
+1. Create a release with the fix
+2. Post a comment on the issue explaining what was fixed and asking for confirmation
+3. **Do NOT close the issue** — leave it open for the user to confirm
+4. Only close after the user explicitly confirms the fix resolved their problem
+
+### Comment Template
+```markdown
+## Fix Available in vX.Y.Z — Please Test
+
+I've released **vX.Y.Z** which should fix this.
+
+### What was changed:
+- [specific explanation]
+
+### To test:
+1. Update to vX.Y.Z via HACS
+2. Restart Home Assistant
+3. [specific thing to check]
+
+Let me know if this resolves it.
+```
