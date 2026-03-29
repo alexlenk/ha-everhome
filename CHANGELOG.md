@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.6.4](https://github.com/alexlenk/ha-everhome/compare/v0.6.3...v0.6.4) (2026-03-29)
+
+
+### Bug Fixes
+
+* fix config flow 500 error: remove `_async_get_entry_with_matching_unique_id = None` that caused TypeError in newer HA versions when called during flow initialization
+* fix mypy error on `domain=DOMAIN` keyword argument in ConfigFlow class definition
+* fix test_config_flow.py references to old class name `EverhomeFlowHandler` (renamed to `ConfigFlow` in v0.6.3)
+
+
 ## [0.6.3](https://github.com/alexlenk/ha-everhome/compare/v0.6.2...v0.6.3) (2026-03-12)
 
 
