@@ -11,7 +11,7 @@ from homeassistant import config_entries
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
 
-from custom_components.everhome.config_flow import EverhomeFlowHandler
+from custom_components.everhome.config_flow import ConfigFlow
 from custom_components.everhome.const import API_BASE_URL, DOMAIN
 
 
@@ -38,10 +38,10 @@ class TestEverhomeConfigFlow:
             AbstractOAuth2FlowHandler,
         )
 
-        from custom_components.everhome.config_flow import EverhomeFlowHandler
+        from custom_components.everhome.config_flow import ConfigFlow
 
-        assert issubclass(EverhomeFlowHandler, AbstractOAuth2FlowHandler)
-        assert hasattr(EverhomeFlowHandler, "async_oauth_create_entry")
+        assert issubclass(ConfigFlow, AbstractOAuth2FlowHandler)
+        assert hasattr(ConfigFlow, "async_oauth_create_entry")
 
     async def test_oauth_create_entry_success(
         self,
@@ -49,7 +49,7 @@ class TestEverhomeConfigFlow:
         mock_devices_response,
     ):
         """Test successful OAuth entry creation."""
-        flow = EverhomeFlowHandler()
+        flow = ConfigFlow()
         flow.hass = hass
 
         oauth_data = {
@@ -72,7 +72,7 @@ class TestEverhomeConfigFlow:
         hass: HomeAssistant,
     ):
         """Test OAuth entry creation with connection error."""
-        flow = EverhomeFlowHandler()
+        flow = ConfigFlow()
         flow.hass = hass
 
         oauth_data = {
@@ -94,7 +94,7 @@ class TestEverhomeConfigFlow:
         hass: HomeAssistant,
     ):
         """Test OAuth entry creation with aiohttp client error."""
-        flow = EverhomeFlowHandler()
+        flow = ConfigFlow()
         flow.hass = hass
 
         oauth_data = {
@@ -118,7 +118,7 @@ class TestEverhomeConfigFlow:
         hass: HomeAssistant,
     ):
         """Test OAuth entry creation with unexpected error."""
-        flow = EverhomeFlowHandler()
+        flow = ConfigFlow()
         flow.hass = hass
 
         oauth_data = {
@@ -143,7 +143,7 @@ class TestEverhomeConfigFlow:
         """Test the reauth flow."""
         mock_config_entry.add_to_hass(hass)
 
-        flow = EverhomeFlowHandler()
+        flow = ConfigFlow()
         flow.hass = hass
         flow.context = {"source": config_entries.SOURCE_REAUTH}
 
@@ -159,7 +159,7 @@ class TestEverhomeConfigFlow:
         mock_oauth_impl,
     ):
         """Test reauth confirmation step."""
-        flow = EverhomeFlowHandler()
+        flow = ConfigFlow()
         flow.hass = hass
         flow.context = {"source": config_entries.SOURCE_REAUTH}
 
@@ -183,7 +183,7 @@ class TestEverhomeConfigFlow:
         mock_devices_response,
     ):
         """Test OAuth entry creation with custom name."""
-        flow = EverhomeFlowHandler()
+        flow = ConfigFlow()
         flow.hass = hass
 
         oauth_data = {
@@ -207,7 +207,7 @@ class TestEverhomeConfigFlow:
         mock_devices_response,
     ):
         """Test OAuth entry creation without name."""
-        flow = EverhomeFlowHandler()
+        flow = ConfigFlow()
         flow.hass = hass
 
         oauth_data = {
@@ -226,15 +226,15 @@ class TestEverhomeConfigFlow:
 
     def test_flow_handler_domain(self):
         """Test that flow handler has correct domain."""
-        assert EverhomeFlowHandler.DOMAIN == DOMAIN
+        assert ConfigFlow.DOMAIN == DOMAIN
 
     def test_flow_handler_version(self):
         """Test that flow handler has correct version."""
-        assert EverhomeFlowHandler.VERSION == 1
+        assert ConfigFlow.VERSION == 1
 
     def test_flow_handler_logger(self):
         """Test that flow handler logger is configured correctly."""
-        flow = EverhomeFlowHandler()
+        flow = ConfigFlow()
         logger = flow.logger
 
         assert logger.name == "custom_components.everhome.config_flow"

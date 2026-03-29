@@ -14,13 +14,12 @@ from .const import API_BASE_URL, API_DEVICE_URL, DOMAIN
 _LOGGER = logging.getLogger(__name__)
 
 
-class ConfigFlow(config_entry_oauth2_flow.AbstractOAuth2FlowHandler, domain=DOMAIN):
+class ConfigFlow(  # type: ignore[call-arg]
+    config_entry_oauth2_flow.AbstractOAuth2FlowHandler, domain=DOMAIN
+):
     """Config flow to handle Everhome OAuth2 authentication."""
 
     VERSION = 1
-
-    # Allow multiple config entries
-    _async_get_entry_with_matching_unique_id = None
 
     @property
     def logger(self) -> logging.Logger:
