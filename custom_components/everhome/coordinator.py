@@ -1,13 +1,20 @@
 """Data update coordinator for Everhome integration."""
 
-import asyncio
+from __future__ import annotations
+
 import logging
 from datetime import timedelta
-from typing import Any, Optional
+from http import HTTPStatus
+from typing import Any
 
 from aiohttp.client_exceptions import ClientError
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import (
+    ConfigEntryAuthFailed,
+    HomeAssistantError,
+    OAuth2TokenRequestError,
+)
 from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
     UpdateFailed,
@@ -25,91 +32,106 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
+type EverhomeConfigEntry = ConfigEntry[EverhomeDataUpdateCoordinator]
 
-class EverhomeDataUpdateCoordinator(DataUpdateCoordinator):
+
+class EverhomeDataUpdateCoordinator(DataUpdateCoordinator[dict[int, dict[str, Any]]]):
     """Class to manage fetching data from the API."""
 
+    config_entry: EverhomeConfigEntry
+
     def __init__(
-        self, hass: HomeAssistant, auth: EverhomeAuth, entry: ConfigEntry
+        self, hass: HomeAssistant, auth: EverhomeAuth, entry: EverhomeConfigEntry
     ) -> None:
         """Initialize."""
         self.auth = auth
-        self.hass = hass
-        self.entry = entry
 
         super().__init__(
             hass,
             _LOGGER,
+            config_entry=entry,
             name=DOMAIN,
             update_interval=timedelta(seconds=UPDATE_INTERVAL),
         )
 
-    async def _async_update_data(self) -> dict[str, Any]:
+    async def _async_update_data(self) -> dict[int, dict[str, Any]]:
         """Update data via API."""
         try:
-            # Get all devices
             return await self._get_devices()
-        except (ClientError, asyncio.TimeoutError) as err:
+        except OAuth2TokenRequestError:
+            # Let the coordinator handle token refresh failures itself:
+            # it starts reauth for non-recoverable ones.
+            raise
+        except (ClientError, TimeoutError) as err:
             raise UpdateFailed(f"Error communicating with API: {err}") from err
 
-    async def _get_devices(self) -> dict[str, Any]:
-        """Get all devices from the API."""
+    async def _get_devices(self) -> dict[int, dict[str, Any]]:
+        """Get all supported, enabled devices from the API."""
         access_token = await self.auth.async_get_access_token()
         headers = {"Authorization": f"Bearer {access_token}"}
 
         async with self.auth.aiohttp_session.get(
             f"{API_BASE_URL}{API_DEVICE_URL}", headers=headers
         ) as resp:
-            if resp.status != 200:
+            if resp.status == HTTPStatus.UNAUTHORIZED:
+                raise ConfigEntryAuthFailed("Everhome rejected the access token")
+            if resp.status != HTTPStatus.OK:
                 _LOGGER.error("Failed to get devices: %s", await resp.text())
                 raise UpdateFailed(f"Failed to get devices: {resp.status}")
 
             devices = await resp.json()
 
-            # Filter for supported device subtypes across all platforms
-            supported_devices = {}
-            for device in devices:
-                if device.get("subtype") in SUPPORTED_SUBTYPES:
-                    supported_devices[device["id"]] = device
+        return {
+            device["id"]: device
+            for device in devices
+            if device.get("subtype") in SUPPORTED_SUBTYPES
+            and not device.get("disabled", False)
+        }
 
-            return supported_devices
+    async def execute_device_action(self, device_id: int, action: str) -> None:
+        """Execute an action on a device.
 
-    async def execute_device_action(
-        self,
-        device_id: str,
-        action: str,
-        params: Optional[dict[str, Any]] = None,
-    ) -> bool:
-        """Execute an action on a device."""
+        Raises HomeAssistantError if everHome does not accept the command, so the
+        failure shows up in the service call / automation trace.
+        """
         access_token = await self.auth.async_get_access_token()
         headers = {
             "Authorization": f"Bearer {access_token}",
             "Content-Type": "application/json",
         }
-
         url = f"{API_BASE_URL}{API_DEVICE_EXECUTE_URL.format(device_id=device_id)}"
-        data = {"action": action}
-        if params:
-            data.update(params)
 
         try:
             async with self.auth.aiohttp_session.post(
-                url, headers=headers, json=data
+                url, headers=headers, json={"action": action}
             ) as resp:
-                if resp.status >= 400:
+                body = await resp.text()
+                if resp.status >= HTTPStatus.BAD_REQUEST:
                     _LOGGER.error(
-                        "Failed to execute action %s on device %s: %s",
+                        "Failed to execute action %s on device %s: %s %s",
                         action,
                         device_id,
-                        await resp.text(),
+                        resp.status,
+                        body,
                     )
-                    return False
-                return True
-        except (ClientError, asyncio.TimeoutError) as err:
+                    raise HomeAssistantError(
+                        f"Everhome rejected action '{action}' for device "
+                        f"{device_id} (HTTP {resp.status})"
+                    )
+                _LOGGER.debug(
+                    "Executed action %s on device %s: %s %s",
+                    action,
+                    device_id,
+                    resp.status,
+                    body,
+                )
+        except (ClientError, TimeoutError) as err:
             _LOGGER.error(
                 "Error executing action %s on device %s: %s",
                 action,
                 device_id,
                 err,
             )
-            return False
+            raise HomeAssistantError(
+                f"Error sending action '{action}' to device {device_id}: {err}"
+            ) from err

@@ -22,13 +22,21 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          echo "Looking for open Release v* PR targeting main"
+          echo "Looking for open Release v* PR from a claude/release-* branch of this repo"
 
+          # Only merge release PRs whose head branch lives in this repository
+          # (pushing there needs write access) and follows the release naming
+          # convention. Matching the title alone would also merge a PR from a
+          # fork that is simply titled "Release v...".
           PR_NUMBER=$(gh pr list \
             --base main \
             --state open \
-            --json number,title \
-            --jq '[.[] | select(.title | test("^Release v"))] | .[0].number // empty' \
+            --json number,title,headRefName,isCrossRepository \
+            --jq '[.[] | select(
+                (.title | test("^Release v"))
+                and (.headRefName | startswith("claude/release-"))
+                and (.isCrossRepository | not)
+              )] | .[0].number // empty' \
             --repo "${{ github.repository }}")
 
           if [ -z "$PR_NUMBER" ]; then

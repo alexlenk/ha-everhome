@@ -1,23 +1,63 @@
-"""Fixtures for Everhome integration tests."""
+"""Fixtures for Everhome integration tests.
+
+Device payloads follow the documented `GET /device` schema
+(https://everhome.cloud/en/developer/api): `id` is an int, state lives in
+`states`, and there are no `position`/`capabilities`/`model` fields.
+"""
 
 from __future__ import annotations
 
-from typing import Any, Dict
-from unittest.mock import AsyncMock, patch
+import time
+from typing import Any
 
 import pytest
-from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
-from pytest_homeassistant_custom_component.common import MockConfigEntry
-
-from custom_components.everhome.const import (
-    CONF_ACCESS_TOKEN,
-    CONF_CLIENT_ID,
-    CONF_CLIENT_SECRET,
-    CONF_REFRESH_TOKEN,
-    CONF_TOKEN_EXPIRY,
-    DOMAIN,
+from homeassistant.components.application_credentials import (
+    ClientCredential,
+    async_import_client_credential,
 )
+from homeassistant.core import HomeAssistant
+from homeassistant.setup import async_setup_component
+from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant_custom_component.test_util.aiohttp import (
+    AiohttpClientMocker,
+)
+
+from custom_components.everhome.const import API_BASE_URL, API_DEVICE_URL, DOMAIN
+
+CLIENT_ID = "test_client_id"
+CLIENT_SECRET = "test_client_secret"
+DEVICE_URL = f"{API_BASE_URL}{API_DEVICE_URL}"
+TOKEN_URL = f"{API_BASE_URL}/oauth2/token"
+
+
+def execute_url(device_id: int) -> str:
+    """Return the execute URL for a device."""
+    return f"{API_BASE_URL}/device/{device_id}/execute"
+
+
+def make_device(
+    device_id: int,
+    subtype: str,
+    name: str,
+    states: dict[str, Any] | None = None,
+    **extra: Any,
+) -> dict[str, Any]:
+    """Build a device in the documented API shape."""
+    return {
+        "id": device_id,
+        "name": name,
+        "subtype": subtype,
+        "states": states or {},
+        "actions": [],
+        "disabled": False,
+        "manufacturerid": 1,
+        "productid": 1,
+        "gatewayid": 1,
+        "roomid": None,
+        "homeid": 1,
+        "statedefinitions": [],
+        **extra,
+    }
 
 
 @pytest.fixture(autouse=True)
@@ -27,223 +67,62 @@ def auto_enable_custom_integrations(enable_custom_integrations):
 
 
 @pytest.fixture
-def mock_config_entry() -> MockConfigEntry:
-    """Create a mock config entry."""
-    return MockConfigEntry(
-        domain=DOMAIN,
-        data={
-            CONF_CLIENT_ID: "test_client_id",
-            CONF_CLIENT_SECRET: "test_client_secret",
-            CONF_ACCESS_TOKEN: "test_access_token",
-            CONF_REFRESH_TOKEN: "test_refresh_token",
-            CONF_TOKEN_EXPIRY: 1234567890,
-        },
-        entry_id="test_entry_id",
-        unique_id="everhome_test",
-        title="Everhome",
+def devices() -> list[dict[str, Any]]:
+    """Return one device per supported platform plus unsupported/disabled ones."""
+    return [
+        make_device(8, "shutter", "Kinderzimmer", {"general": "up"}),
+        make_device(9, "awning", "Terrasse", {"general": "in"}),
+        make_device(10, "garagedoor", "Garage", {"general": "down"}),
+        make_device(20, "light", "Flur", {"general": "on"}),
+        make_device(30, "socket", "Steckdose", {"general": "off"}),
+        make_device(40, "window", "Fenster", {"state": "closed"}),
+        make_device(50, "speaker", "Unsupported speaker", {}),
+        make_device(
+            60, "shutter", "Disabled shutter", {"general": "up"}, disabled=True
+        ),
+    ]
+
+
+@pytest.fixture
+async def application_credentials(hass: HomeAssistant) -> None:
+    """Register application credentials for the integration."""
+    assert await async_setup_component(hass, "application_credentials", {})
+    await async_import_client_credential(
+        hass, DOMAIN, ClientCredential(CLIENT_ID, CLIENT_SECRET), DOMAIN
     )
 
 
 @pytest.fixture
-def mock_oauth_config() -> Dict[str, Any]:
-    """Mock OAuth configuration."""
-    return {
-        "client_id": "test_client_id",
-        "client_secret": "test_client_secret",
-        "redirect_uri": "https://my.home-assistant.io/redirect/oauth",
-    }
-
-
-@pytest.fixture
-def mock_token_response() -> Dict[str, Any]:
-    """Mock OAuth token response."""
-    return {
-        "access_token": "test_access_token",
-        "refresh_token": "test_refresh_token",
-        "token_type": "Bearer",
-        "expires_in": 3600,
-    }
-
-
-@pytest.fixture
-def mock_shutter_device() -> Dict[str, Any]:
-    """Mock shutter device response."""
-    return {
-        "id": "shutter_001",
-        "name": "Bedroom Shutter",
-        "type": "cover",
-        "categories": ["shutter"],
-        "traits": ["openclose", "startstop"],
-        "willReportState": True,
-        "attributes": {
-            "openDirection": ["UP", "DOWN"],
+def mock_config_entry() -> MockConfigEntry:
+    """Create a config entry with a valid (unexpired) token."""
+    return MockConfigEntry(
+        domain=DOMAIN,
+        title="Everhome (6 devices)",
+        entry_id="test_entry_id",
+        data={
+            "auth_implementation": DOMAIN,
+            "token": {
+                "access_token": "test_access_token",
+                "refresh_token": "test_refresh_token",
+                "token_type": "Bearer",
+                "expires_in": 3600,
+                "expires_at": time.time() + 3600,
+            },
         },
-        "state": {
-            "online": True,
-            "openPercent": 0,
-            "openState": ["CLOSED"],
-        },
-        "deviceInfo": {
-            "manufacturer": "Everhome",
-            "model": "Smart Shutter",
-            "hwVersion": "1.0",
-            "swVersion": "2.1.0",
-        },
-    }
-
-
-@pytest.fixture
-def mock_awning_device() -> Dict[str, Any]:
-    """Mock awning device response."""
-    return {
-        "id": "awning_001",
-        "name": "Patio Awning",
-        "type": "cover",
-        "categories": ["awning"],
-        "traits": ["openclose", "startstop"],
-        "willReportState": True,
-        "attributes": {
-            "openDirection": ["OUT", "IN"],
-        },
-        "state": {
-            "online": True,
-            "openPercent": 50,
-            "openState": ["OPEN"],
-        },
-        "deviceInfo": {
-            "manufacturer": "Everhome",
-            "model": "Smart Awning",
-            "hwVersion": "1.0",
-            "swVersion": "2.1.0",
-        },
-    }
-
-
-@pytest.fixture
-def mock_devices_response(mock_shutter_device, mock_awning_device) -> Dict[str, Any]:
-    """Mock devices API response."""
-    return {
-        "devices": [
-            mock_shutter_device,
-            mock_awning_device,
-        ]
-    }
-
-
-@pytest.fixture
-def mock_device_state_response() -> Dict[str, Any]:
-    """Mock device state response."""
-    return {
-        "online": True,
-        "openPercent": 75,
-        "openState": ["OPEN"],
-    }
-
-
-@pytest.fixture
-def mock_execute_response() -> Dict[str, Any]:
-    """Mock device execute response."""
-    return {
-        "ids": ["shutter_001"],
-        "status": "SUCCESS",
-        "states": {
-            "online": True,
-            "openPercent": 100,
-            "openState": ["OPEN"],
-        },
-    }
-
-
-@pytest.fixture
-def mock_error_response() -> Dict[str, Any]:
-    """Mock API error response."""
-    return {
-        "error": "device_offline",
-        "errorCode": "deviceOffline",
-        "status": "ERROR",
-    }
-
-
-@pytest.fixture
-def mock_everhome_api():
-    """Mock the Everhome API."""
-    from unittest.mock import AsyncMock
-
-    mock_instance = AsyncMock()
-    mock_instance.authenticate.return_value = True
-    mock_instance.refresh_token.return_value = True
-    mock_instance.get_devices.return_value = {"devices": []}
-    mock_instance.get_device_state.return_value = {"online": True}
-    mock_instance.execute_command.return_value = {"status": "SUCCESS"}
-    mock_instance.close = AsyncMock(return_value=None)
-
-    return mock_instance
+    )
 
 
 @pytest.fixture
 async def setup_integration(
     hass: HomeAssistant,
+    application_credentials: None,
     mock_config_entry: MockConfigEntry,
-    mock_everhome_api,
-    mock_devices_response,
-):
-    """Set up the integration with mocked data."""
-    # Configure mock API responses
-    mock_everhome_api.authenticate.return_value = True
-    mock_everhome_api.get_devices.return_value = mock_devices_response
-    mock_everhome_api.close.return_value = None
-
-    # Add config entry to hass
+    aioclient_mock: AiohttpClientMocker,
+    devices: list[dict[str, Any]],
+) -> MockConfigEntry:
+    """Set up the integration with the device list from `devices`."""
+    aioclient_mock.get(DEVICE_URL, json=devices)
     mock_config_entry.add_to_hass(hass)
-
-    # Patch the API class
-    with (
-        patch(
-            "custom_components.everhome.coordinator.EverhomeAPI",
-            return_value=mock_everhome_api,
-        ),
-        patch(
-            "custom_components.everhome.api.EverhomeAPI",
-            return_value=mock_everhome_api,
-        ),
-    ):
-
-        # Setup the integration
-        result = await hass.config_entries.async_setup(mock_config_entry.entry_id)
-        await hass.async_block_till_done()
-
-        # Verify the entry was loaded
-        assert result is True
-        assert mock_config_entry.state == ConfigEntryState.LOADED
-
-        yield mock_config_entry
-
-
-def setup_aiohttp_mock(mock_session, mock_response, method="get"):
-    """Helper to setup aiohttp session mock with proper async context manager."""
-
-    class MockContextManager:
-        async def __aenter__(self):
-            return mock_response
-
-        async def __aexit__(self, exc_type, exc_val, exc_tb):
-            return None
-
-    def mock_method(*args, **kwargs):
-        return MockContextManager()
-
-    if method == "get":
-        mock_session.get = mock_method
-    elif method == "post":
-        mock_session.post = mock_method
-
-
-@pytest.fixture
-def mock_aiohttp_session():
-    """Mock aiohttp session for API testing."""
-    with patch(
-        "homeassistant.helpers.aiohttp_client.async_get_clientsession"
-    ) as mock_get_session:
-        mock_session = AsyncMock()
-        mock_get_session.return_value = mock_session
-        yield mock_session
+    assert await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
+    return mock_config_entry

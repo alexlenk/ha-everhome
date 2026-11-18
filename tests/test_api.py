@@ -90,7 +90,7 @@ class TestEverhomeAuth:
             await everhome_auth.async_get_access_token()
 
     async def test_async_get_access_token_with_different_token_structure(
-        self, hass: HomeAssistant, mock_aiohttp_session
+        self, hass: HomeAssistant
     ):
         """Test access token retrieval with different token structures."""
         # Test with token containing additional fields
@@ -108,9 +108,7 @@ class TestEverhomeAuth:
 
         assert token == "complex_access_token"
 
-    async def test_async_get_access_token_empty_token(
-        self, hass: HomeAssistant, mock_aiohttp_session
-    ):
+    async def test_async_get_access_token_empty_token(self, hass: HomeAssistant):
         """Test access token retrieval with empty token."""
         mock_oauth_session = AsyncMock(spec=config_entry_oauth2_flow.OAuth2Session)
         mock_oauth_session.token = {"access_token": ""}
@@ -121,9 +119,7 @@ class TestEverhomeAuth:
 
         assert token == ""
 
-    async def test_async_get_access_token_none_token(
-        self, hass: HomeAssistant, mock_aiohttp_session
-    ):
+    async def test_async_get_access_token_none_token(self, hass: HomeAssistant):
         """Test access token retrieval with None token."""
         mock_oauth_session = AsyncMock(spec=config_entry_oauth2_flow.OAuth2Session)
         mock_oauth_session.token = {"access_token": None}

@@ -12,22 +12,19 @@
     },
     "abort": {
       "already_configured": "Everhome account is already configured",
+      "authorize_url_timeout": "Timeout while generating an authorization URL.",
       "cannot_connect": "Failed to connect to Everhome API",
       "missing_configuration": "The Everhome component is not configured. Please follow the documentation.",
+      "missing_credentials": "The integration requires application credentials.",
+      "no_url_available": "No URL available. For information about this error, [check the help section]({docs_url})",
       "oauth_error": "Received invalid token data.",
+      "oauth_failed": "Error while obtaining access token.",
+      "oauth_implementation_unavailable": "No OAuth2 implementations are currently available.",
+      "oauth_timeout": "Timeout while resolving the OAuth token.",
+      "oauth_unauthorized": "OAuth authorization error while obtaining access token.",
+      "reauth_successful": "Re-authentication was successful",
       "unknown": "Unexpected error occurred",
-      "wrong_account": "User credentials do not match this integration."
-    }
-  },
-  "entity": {
-    "cover": {
-      "everhome": {
-        "state_attributes": {
-          "current_position": {
-            "name": "Current position"
-          }
-        }
-      }
+      "user_rejected_authorize": "Account linking rejected: {error}"
     }
   }
 }

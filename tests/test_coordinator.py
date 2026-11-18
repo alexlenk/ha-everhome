@@ -1,343 +1,139 @@
-"""Test Everhome data coordinator."""
+"""Tests for the Everhome data update coordinator."""
 
 from __future__ import annotations
 
-import asyncio
-from datetime import timedelta
-from unittest.mock import AsyncMock
+import logging
+from http import HTTPStatus
+from typing import Any
 
-import aiohttp
 import pytest
+from aiohttp import ClientError
+from homeassistant.config_entries import SOURCE_REAUTH
+from homeassistant.const import STATE_UNAVAILABLE
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed
-from homeassistant.helpers.update_coordinator import UpdateFailed
-
-from custom_components.everhome.const import DOMAIN, UPDATE_INTERVAL
-from custom_components.everhome.coordinator import (
-    EverhomeDataUpdateCoordinator,
+from homeassistant.exceptions import HomeAssistantError
+from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant_custom_component.test_util.aiohttp import (
+    AiohttpClientMocker,
 )
 
+from .conftest import DEVICE_URL, execute_url, make_device
 
-class TestEverhomeDataUpdateCoordinator:
-    """Test Everhome data update coordinator."""
 
-    def _setup_aiohttp_mock(self, mock_auth, mock_response, method="get"):
-        """Helper to setup aiohttp session mock with proper async context manager."""
+async def test_execute_sends_documented_body(
+    hass: HomeAssistant,
+    setup_integration: MockConfigEntry,
+    aioclient_mock: AiohttpClientMocker,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Execute posts {"action": ...} and logs the response at debug level."""
+    aioclient_mock.post(execute_url(8), text="")
+    caplog.set_level(logging.DEBUG, logger="custom_components.everhome")
 
-        class MockContextManager:
-            async def __aenter__(self):
-                return mock_response
+    await setup_integration.runtime_data.execute_device_action(8, "up")
 
-            async def __aexit__(self, exc_type, exc_val, exc_tb):
-                return None
+    method, url, data, headers = aioclient_mock.mock_calls[-1]
+    assert method.upper() == "POST"
+    assert str(url) == execute_url(8)
+    assert data == {"action": "up"}
+    assert headers["Authorization"] == "Bearer test_access_token"
+    assert "Executed action up on device 8: 200" in caplog.text
 
-        # Create a function that returns the context manager directly
-        def mock_method(*args, **kwargs):
-            return MockContextManager()
 
-        if method == "get":
-            mock_auth.aiohttp_session.get = mock_method
-        elif method == "post":
-            mock_auth.aiohttp_session.post = mock_method
+@pytest.mark.parametrize(
+    "mock_kwargs",
+    [
+        {"status": HTTPStatus.BAD_GATEWAY, "text": "Bad Gateway"},
+        {"status": HTTPStatus.NOT_FOUND},
+        {"exc": ClientError("boom")},
+        {"exc": TimeoutError()},
+    ],
+)
+async def test_execute_failure_raises(
+    hass: HomeAssistant,
+    setup_integration: MockConfigEntry,
+    aioclient_mock: AiohttpClientMocker,
+    mock_kwargs: dict[str, Any],
+) -> None:
+    """A failed command raises HomeAssistantError instead of passing silently."""
+    aioclient_mock.post(execute_url(8), **mock_kwargs)
 
-    @pytest.fixture
-    def mock_auth(self):
-        """Mock EverhomeAuth."""
-        auth = AsyncMock()
-        auth.async_get_access_token.return_value = "test_access_token"
-        auth.aiohttp_session = AsyncMock()
-        return auth
+    with pytest.raises(HomeAssistantError):
+        await setup_integration.runtime_data.execute_device_action(8, "down")
 
-    @pytest.fixture
-    def coordinator(self, hass: HomeAssistant, mock_auth, mock_config_entry):
-        """Create coordinator fixture."""
-        return EverhomeDataUpdateCoordinator(hass, mock_auth, mock_config_entry)
 
-    def test_coordinator_initialization(
-        self, hass: HomeAssistant, mock_auth, mock_config_entry
+async def test_update_failure_makes_entities_unavailable(
+    hass: HomeAssistant,
+    setup_integration: MockConfigEntry,
+    aioclient_mock: AiohttpClientMocker,
+) -> None:
+    """Entities go unavailable when polling fails, and recover afterwards."""
+    coordinator = setup_integration.runtime_data
+    assert hass.states.get("cover.kinderzimmer").state == "open"
+
+    aioclient_mock.clear_requests()
+    aioclient_mock.get(DEVICE_URL, status=HTTPStatus.BAD_GATEWAY)
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+
+    for entity_id in (
+        "cover.kinderzimmer",
+        "light.flur",
+        "switch.steckdose",
+        "binary_sensor.fenster",
     ):
-        """Test coordinator initialization."""
-        coordinator = EverhomeDataUpdateCoordinator(hass, mock_auth, mock_config_entry)
-
-        assert coordinator.auth == mock_auth
-        assert coordinator.hass == hass
-        assert coordinator.entry == mock_config_entry
-        assert coordinator.name == DOMAIN
-        assert coordinator.update_interval == timedelta(seconds=UPDATE_INTERVAL)
-
-    async def test_update_data_success(
-        self, coordinator, mock_auth, mock_shutter_device, mock_awning_device
-    ):
-        """Test successful data update."""
-        # Mock API response with a mix of supported and unsupported devices
-        devices_data = [
-            {**mock_shutter_device, "subtype": "shutter"},
-            {**mock_awning_device, "subtype": "awning"},
-            {"id": "light_001", "subtype": "light"},
-            {"id": "socket_001", "subtype": "socket"},
-            {"id": "speaker_001", "subtype": "speaker"},  # Not supported
-        ]
-
-        mock_response = AsyncMock()
-        mock_response.status = 200
-        mock_response.json = AsyncMock(return_value=devices_data)
-
-        # Setup aiohttp mock with proper async context manager
-        self._setup_aiohttp_mock(mock_auth, mock_response, "get")
-
-        result = await coordinator._async_update_data()
-
-        assert len(result) == 4
-        assert "shutter_001" in result
-        assert "awning_001" in result
-        assert "light_001" in result
-        assert "socket_001" in result
-        assert "speaker_001" not in result
-
-        # Verify API was called correctly
-        mock_auth.async_get_access_token.assert_called_once()
-
-    async def test_update_data_auth_failed(self, coordinator, mock_auth):
-        """Test data update with auth failure."""
-        mock_auth.async_get_access_token.side_effect = ConfigEntryAuthFailed(
-            "Auth failed"
-        )
-
-        with pytest.raises(ConfigEntryAuthFailed):
-            await coordinator._async_update_data()
-
-    async def test_update_data_client_error(self, coordinator, mock_auth):
-        """Test data update with client error."""
-        mock_auth.async_get_access_token.side_effect = aiohttp.ClientError(
-            "Connection failed"
-        )
-
-        with pytest.raises(UpdateFailed, match="Error communicating with API"):
-            await coordinator._async_update_data()
-
-    async def test_update_data_timeout_error(self, coordinator, mock_auth):
-        """Test data update with timeout error."""
-        mock_auth.async_get_access_token.side_effect = asyncio.TimeoutError()
-
-        with pytest.raises(UpdateFailed, match="Error communicating with API"):
-            await coordinator._async_update_data()
-
-    async def test_get_devices_http_error(self, coordinator, mock_auth):
-        """Test get devices with HTTP error response."""
-        mock_response = AsyncMock()
-        mock_response.status = 500
-        mock_response.text.return_value = "Internal Server Error"
-
-        # Setup aiohttp mock with proper async context manager
-        self._setup_aiohttp_mock(mock_auth, mock_response, "get")
-
-        with pytest.raises(UpdateFailed, match="Failed to get devices: 500"):
-            await coordinator._get_devices()
-
-    async def test_get_devices_filters_device_types(self, coordinator, mock_auth):
-        """Test that get_devices includes all supported subtypes and excludes others."""
-        devices_data = [
-            # Cover subtypes
-            {"id": "shutter_001", "subtype": "shutter"},
-            {"id": "blind_001", "subtype": "blind"},
-            {"id": "awning_001", "subtype": "awning"},
-            {"id": "curtain_001", "subtype": "curtain"},
-            {"id": "garage_001", "subtype": "garagedoor"},
-            # Binary sensor subtypes
-            {"id": "door_001", "subtype": "door"},
-            {"id": "window_001", "subtype": "window"},
-            {"id": "motion_001", "subtype": "motiondetector"},
-            {"id": "smoke_001", "subtype": "smokedetector"},
-            {"id": "water_001", "subtype": "waterdetector"},
-            # Light subtype
-            {"id": "light_001", "subtype": "light"},
-            # Switch subtypes
-            {"id": "socket_001", "subtype": "socket"},
-            {"id": "watering_001", "subtype": "watering"},
-            # Unsupported subtypes — must be excluded
-            {"id": "speaker_001", "subtype": "speaker"},
-            {"id": "no_subtype", "name": "No subtype device"},
-        ]
-
-        mock_response = AsyncMock()
-        mock_response.status = 200
-        mock_response.json = AsyncMock(return_value=devices_data)
-
-        self._setup_aiohttp_mock(mock_auth, mock_response, "get")
-
-        result = await coordinator._get_devices()
-
-        expected_included = [
-            "shutter_001",
-            "blind_001",
-            "awning_001",
-            "curtain_001",
-            "garage_001",
-            "door_001",
-            "window_001",
-            "motion_001",
-            "smoke_001",
-            "water_001",
-            "light_001",
-            "socket_001",
-            "watering_001",
-        ]
-        assert len(result) == 13
-        for device_id in expected_included:
-            assert device_id in result
-
-        assert "speaker_001" not in result
-        assert "no_subtype" not in result
-
-    async def test_execute_device_action_success(self, coordinator, mock_auth):
-        """Test successful device action execution."""
-        mock_response = AsyncMock()
-        mock_response.status = 200
-
-        # Setup aiohttp mock with proper async context manager
-        self._setup_aiohttp_mock(mock_auth, mock_response, "post")
-
-        result = await coordinator.execute_device_action("device_001", "open")
-
-        assert result is True
-
-        # Verify API call
-        mock_auth.async_get_access_token.assert_called_once()
-
-    async def test_execute_device_action_with_params(self, coordinator, mock_auth):
-        """Test device action execution with extra params (e.g. set_position)."""
-        mock_response = AsyncMock()
-        mock_response.status = 200
-
-        self._setup_aiohttp_mock(mock_auth, mock_response, "post")
-
-        result = await coordinator.execute_device_action(
-            "device_001", "set_position", {"position": 50}
-        )
-
-        assert result is True
-
-        # Call arguments verification removed (function mock doesn't support call_args)
-        # Test verifies functionality by checking return value
-
-    async def test_execute_device_action_http_error(self, coordinator, mock_auth):
-        """Test device action execution with HTTP error."""
-        mock_response = AsyncMock()
-        mock_response.status = 400
-        mock_response.text.return_value = "Bad Request"
-
-        # Setup aiohttp mock with proper async context manager
-        self._setup_aiohttp_mock(mock_auth, mock_response, "post")
-
-        result = await coordinator.execute_device_action("device_001", "invalid_action")
-
-        assert result is False
-
-    async def test_execute_device_action_client_error(self, coordinator, mock_auth):
-        """Test device action execution with client error."""
-
-        # For error tests, we create a function that raises the exception immediately
-        def mock_post(*args, **kwargs):
-            raise aiohttp.ClientError("Connection failed")
-
-        mock_auth.aiohttp_session.post = mock_post
-
-        result = await coordinator.execute_device_action("device_001", "open")
-
-        assert result is False
-
-    async def test_execute_device_action_timeout_error(self, coordinator, mock_auth):
-        """Test device action execution with timeout error."""
-
-        # For error tests, we create a function that raises the exception immediately
-        def mock_post(*args, **kwargs):
-            raise asyncio.TimeoutError()
-
-        mock_auth.aiohttp_session.post = mock_post
-
-        result = await coordinator.execute_device_action("device_001", "open")
-
-        assert result is False
-
-    async def test_execute_device_action_auth_token_refresh(
-        self, coordinator, mock_auth
-    ):
-        """Test device action execution triggers token refresh."""
-        mock_response = AsyncMock()
-        mock_response.status = 200
-
-        # Setup aiohttp mock with proper async context manager
-        self._setup_aiohttp_mock(mock_auth, mock_response, "post")
-        mock_auth.async_get_access_token.return_value = "refreshed_token"
-
-        await coordinator.execute_device_action("device_001", "close")
-
-        # Verify token was requested
-        mock_auth.async_get_access_token.assert_called_once()
-
-        # Header verification removed (function mock doesn't support call_args)
-        # Test verifies functionality by checking token refresh was called
-
-    async def test_get_devices_empty_response(self, coordinator, mock_auth):
-        """Test get devices with empty response."""
-        mock_response = AsyncMock()
-        mock_response.status = 200
-        mock_response.json = AsyncMock(return_value=[])
-
-        # Setup aiohttp mock with proper async context manager
-        self._setup_aiohttp_mock(mock_auth, mock_response, "get")
-
-        result = await coordinator._get_devices()
-
-        assert result == {}
-
-    async def test_coordinator_api_url_construction(self, coordinator, mock_auth):
-        """Test that coordinator constructs correct API URLs."""
-        mock_response = AsyncMock()
-        mock_response.status = 200
-        mock_response.json = AsyncMock(return_value=[])
-
-        # Setup aiohttp mock with proper async context manager
-        self._setup_aiohttp_mock(mock_auth, mock_response, "get")
-
-        await coordinator._get_devices()
-
-        # URL verification removed (function mock doesn't support call_args)
-        # Test verifies functionality by successful execution
-
-    async def test_execute_action_url_construction(self, coordinator, mock_auth):
-        """Test that execute action constructs correct URLs."""
-        mock_response = AsyncMock()
-        mock_response.status = 200
-
-        # Setup aiohttp mock with proper async context manager
-        self._setup_aiohttp_mock(mock_auth, mock_response, "post")
-
-        await coordinator.execute_device_action("test_device_123", "stop")
-
-        # URL and payload verification removed (function mock doesn't support call_args)
-        # Test verifies functionality by successful execution
-
-    async def test_coordinator_device_caching(
-        self, coordinator, mock_auth, mock_shutter_device
-    ):
-        """Test that coordinator properly manages device cache."""
-        devices_data = [{**mock_shutter_device, "subtype": "shutter"}]
-
-        mock_response = AsyncMock()
-        mock_response.status = 200
-        mock_response.json = AsyncMock(return_value=devices_data)
-
-        # Setup aiohttp mock with proper async context manager
-        self._setup_aiohttp_mock(mock_auth, mock_response, "get")
-
-        # First call
-        result1 = await coordinator._get_devices()
-        assert "shutter_001" in result1
-
-        # Second call - should make new API call (no caching in _get_devices)
-        result2 = await coordinator._get_devices()
-        assert "shutter_001" in result2
-
-        # Verify API was called (call_count not available with function mock)
-        # Test passes if no exceptions were raised
+        assert hass.states.get(entity_id).state == STATE_UNAVAILABLE
+
+    aioclient_mock.clear_requests()
+    aioclient_mock.get(
+        DEVICE_URL, json=[make_device(8, "shutter", "Kinderzimmer", {"general": "up"})]
+    )
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+
+    assert hass.states.get("cover.kinderzimmer").state == "open"
+    # Devices no longer returned by the API become unavailable
+    assert hass.states.get("light.flur").state == STATE_UNAVAILABLE
+
+
+async def test_unauthorized_poll_starts_reauth(
+    hass: HomeAssistant,
+    setup_integration: MockConfigEntry,
+    aioclient_mock: AiohttpClientMocker,
+) -> None:
+    """A 401 while polling (token revoked server-side) starts reauth."""
+    aioclient_mock.clear_requests()
+    aioclient_mock.get(DEVICE_URL, status=HTTPStatus.UNAUTHORIZED)
+
+    await setup_integration.runtime_data.async_refresh()
+    await hass.async_block_till_done()
+
+    flows = hass.config_entries.flow.async_progress()
+    assert [flow["context"]["source"] for flow in flows] == [SOURCE_REAUTH]
+
+
+async def test_new_devices_are_added_without_reload(
+    hass: HomeAssistant,
+    setup_integration: MockConfigEntry,
+    aioclient_mock: AiohttpClientMocker,
+    devices: list[dict[str, Any]],
+) -> None:
+    """Devices added in everHome after setup appear on the next poll."""
+    assert hass.states.get("cover.bad") is None
+
+    aioclient_mock.clear_requests()
+    aioclient_mock.get(
+        DEVICE_URL,
+        json=[
+            *devices,
+            make_device(70, "shutter", "Bad", {"general": "down"}),
+            make_device(71, "socket", "Neue Steckdose", {"general": "on"}),
+        ],
+    )
+    await setup_integration.runtime_data.async_refresh()
+    await hass.async_block_till_done()
+
+    assert hass.states.get("cover.bad").state == "closed"
+    assert hass.states.get("switch.neue_steckdose").state == "on"
+    # Existing entities are not duplicated
+    assert len(hass.states.async_entity_ids("cover")) == 4
