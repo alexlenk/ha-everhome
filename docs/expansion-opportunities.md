@@ -8,19 +8,19 @@ type.
 
 ## What Is Currently Supported
 
-The integration filters `GET /device` responses to cover-type subtypes only:
+| API subtype | HA platform | HA device class |
+|-------------|-------------|-----------------|
+| `shutter` | `cover` | `CoverDeviceClass.SHUTTER` |
+| `blind` | `cover` | `CoverDeviceClass.BLIND` |
+| `curtain` | `cover` | `CoverDeviceClass.BLIND` |
+| `awning` | `cover` | `CoverDeviceClass.AWNING` |
+| `garagedoor` | `cover` | `CoverDeviceClass.GARAGE` |
+| `door`, `window` | `binary_sensor` | `DOOR`, `WINDOW` |
+| `motiondetector`, `smokedetector`, `waterdetector` | `binary_sensor` | `MOTION`, `SMOKE`, `MOISTURE` |
+| `light` | `light` | on/off only |
+| `socket`, `watering` | `switch` | `OUTLET`, `SWITCH` |
 
-| API subtype  | HA device class      |
-|-------------|----------------------|
-| `shutter`   | `CoverDeviceClass.SHUTTER` |
-| `blind`     | `CoverDeviceClass.BLIND`   |
-| `curtain`   | `CoverDeviceClass.BLIND`   |
-| `awning`    | `CoverDeviceClass.AWNING`  |
-| `garage_door` | `CoverDeviceClass.GARAGE` |
-
-> **Known bug**: the coordinator filters for `"garage_door"` (with underscore) but the
-> Everhome API returns the subtype as `"garagedoor"` (no underscore). Garage doors are
-> therefore silently ignored at the moment.
+Devices with `disabled: true` are skipped.
 
 ---
 
@@ -75,11 +75,12 @@ StateDefinition types: `options`, `float`, `color`, `bool`
 
 | API subtype   | HA entity type | Notes |
 |---------------|----------------|-------|
-| `light`       | `LightEntity`  | `states.general` = `on`/`off`; `states.brightness` for dimming |
+| `light`       | `LightEntity`  | `states.general` = `on`/`off` (implemented, on/off only) |
 | `lightsensor` | `SensorEntity` | `states.luminance` in lux |
 
-**Effort**: Low. The `general` on/off state maps directly to `LightEntity`. Brightness
-and colour (if the `color` StateDefinition is present) add dimmer/RGB support.
+**Effort**: Low. The `general` on/off state maps directly to `LightEntity`. Dimming
+would need an execute parameter for brightness, which the API docs don't document
+(`POST /device/{id}/execute` takes only `action`).
 
 ---
 
@@ -176,19 +177,19 @@ available through the generic Everhome execute API.
 
 ## Additional Cover Subtypes (Quick Win)
 
-The current cover platform already works; the following subtypes just need to be added
+The current cover platform already works; the following subtypes could be added
 to the coordinator filter and an appropriate `CoverDeviceClass` mapping:
 
 | API subtype  | HA device class suggestion  |
 |-------------|------------------------------|
-| `garagedoor` | `CoverDeviceClass.GARAGE` (fix existing `garage_door` typo) |
 | `door`       | `CoverDeviceClass.DOOR` (if motorised) |
 | `window`     | `CoverDeviceClass.WINDOW` (if motorised) |
 
 > Note: `door` and `window` appear in both the binary_sensor and cover categories.
 > The distinction is whether the device is motorised (cover) or a contact sensor
 > (binary_sensor). The API `subtype` field alone may not be sufficient to distinguish
-> them; the `capabilities` array should be checked.
+> them. The documented device object has no `capabilities` field; its `actions`
+> list (action keys) or `statedefinitions` may help tell them apart.
 
 ---
 
@@ -196,15 +197,13 @@ to the coordinator filter and an appropriate `CoverDeviceClass` mapping:
 
 Based on effort vs. user value:
 
-1. **Fix `garagedoor` subtype bug** — trivial, zero new code
-2. **Binary sensors** (`door`, `window`, `motiondetector`, `smokedetector`, `waterdetector`) — low effort, high value for security/automation
-3. **Light** (`light`) — low effort, very common device type
-4. **Switch** (`socket`, `watering`) — low effort
-5. **Sensors** (`electricitymeter`, `solar`, `lightsensor`, etc.) — low effort, useful for energy dashboard
-6. **Climate** (`heating`, `cooling`) — medium effort, very common use case
-7. **Lock** (`entrancecontrol`) — medium effort
-8. **Camera** (`ipcamera`) — high effort, blocked on undocumented stream URL
-9. **Media player** (`speaker`) — high effort, limited API capability
+Done: `garagedoor` fix, binary sensors, light (on/off), switch.
+
+1. **Sensors** (`electricitymeter`, `solar`, `lightsensor`, etc.) — low effort, useful for energy dashboard
+2. **Climate** (`heating`, `cooling`) — medium effort, very common use case
+3. **Lock** (`entrancecontrol`) — medium effort
+4. **Camera** (`ipcamera`) — high effort, blocked on undocumented stream URL
+5. **Media player** (`speaker`) — high effort, limited API capability
 
 ---
 

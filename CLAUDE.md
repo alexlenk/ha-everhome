@@ -4,7 +4,9 @@ This file provides guidance to Claude Code when working with code in this reposi
 
 ## Project Overview
 
-Home Assistant custom integration for Everhome shutter/cover control via OAuth2 cloud API. The integration supports shutters, blinds, awnings, curtains, and garage doors as HA cover entities.
+Home Assistant custom integration for the Everhome cloud API (OAuth2). Platforms: `cover` (shutters, blinds, awnings, curtains, garage doors), `binary_sensor` (door/window contacts, motion, smoke, water), `light` (on/off) and `switch` (sockets, watering). Only `cover` has been tested with real hardware.
+
+Minimum Home Assistant version: 2026.10 (`hacs.json`). Tests need Python 3.14 (`pytest-homeassistant-custom-component>=0.13.375`, which pins HA 2026.10.4).
 
 ## Development Commands
 
@@ -51,26 +53,31 @@ pip install -r requirements_test.txt
 ## Architecture
 
 ### Core Files
-- `__init__.py` — Entry setup/unload; validates OAuth token, creates coordinator, forwards to cover platform
+- `__init__.py` — Entry setup/unload; creates the coordinator, stores it in `entry.runtime_data`, forwards to all platforms
 - `api.py` — `EverhomeAuth`: wraps OAuth2Session, provides `async_get_access_token()` and `aiohttp_session`
-- `coordinator.py` — `EverhomeDataUpdateCoordinator`: polls `/device` every 5 minutes, filters for cover subtypes, executes device actions
-- `cover.py` — `EverhomeCover` entity: reads from coordinator data, sends actions via coordinator
-- `config_flow.py` — OAuth2 config flow; validates credentials by fetching device list
+- `coordinator.py` — `EverhomeDataUpdateCoordinator`: polls `/device` every 5 minutes, keeps supported, non-disabled subtypes, executes device actions (raises `HomeAssistantError` on failure; a 401 on poll raises `ConfigEntryAuthFailed` → reauth)
+- `entity.py` — `EverhomeEntity` base (unique_id, device info, availability) and `async_setup_platform_entities()` which also adds devices that appear later
+- `cover.py`, `binary_sensor.py`, `light.py`, `switch.py` — platform entities
+- `config_flow.py` — OAuth2 config flow; validates the token by fetching the device list; on reauth updates the existing entry
 - `application_credentials.py` — Provides OAuth2 authorize/token URLs
-- `const.py` — All constants (URLs, states, actions, domain)
+- `const.py` — All constants (URLs, subtypes, states, actions, domain)
 
 ### API Data Structure
-Devices are returned as a flat JSON array from `GET /device`. Each device has:
-- `id` — unique device identifier
-- `subtype` — one of: `shutter`, `blind`, `awning`, `curtain`, `garage_door`
-- `name` — display name
-- `states.general` — current state: `"up"` (open), `"down"` (closed), `"opening"`, `"closing"`
-- `position` — integer 0–100 (optional)
-- `capabilities` — list of supported actions (e.g., `["set_position"]`)
-- `model`, `firmware_version` — device info
+Source: official docs at https://everhome.cloud/en/developer/api (descriptions are in German).
+
+`GET /device` returns a flat JSON array. Documented device fields:
+`id` (int), `name`, `subtype`, `states`, `actions` (list of `{key, style, type, subtype}`), `disabled`, `manufacturerid`, `statedefinitions`, `productid`, `gatewayid`, `roomid`, `homeid`, `batteries`, `properties` (only with `?include="properties"`).
+
+There is **no** `position`, `capabilities`, `model` or `firmware_version` field — don't rely on them.
+
+`POST /device/{id}/execute` takes a JSON body with only `action` (string) and returns `void`. There is no documented way to force a command or set a device's stored state.
+
+Subtypes used here: `shutter`, `blind`, `awning`, `curtain`, `garagedoor` (no underscore), `door`, `window`, `motiondetector`, `smokedetector`, `waterdetector`, `light`, `socket`, `watering`.
 
 ### State Field Convention
-All state reads use `device_data.get("states", {}).get("general")` — the nested `states.general` field. The flat `state` field is NOT used. Values: `"up"`, `"down"`, `"opening"`, `"closing"`.
+- Covers and on/off devices read `states.general`. Documented values: `on`, `off`, `up`, `down`, `in`, `out`. Covers map `up`/`out` → open and `down`/`in` → closed (the awning mapping `out` = open is not verified against real hardware). There is no `opening`/`closing`.
+- Door/window contacts read `states.state` (`open`/`closed`).
+- Battery: `states.batteryboolean` (`battery-ok`/`battery-low`), `states.batterypercentage`.
 
 ## CI / GitHub Actions
 

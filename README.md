@@ -21,7 +21,7 @@ _Integration to control Everhome devices in Home Assistant._
 | -------- | ----------- | --------------- |
 | `cover`  | Shutters, blinds, awnings, curtains, and garage doors | ✅ Yes |
 | `binary_sensor` | Door/window contacts, motion, smoke, and water detectors | ⚠️ No — API-based only |
-| `light` | On/off and dimmable lights | ⚠️ No — API-based only |
+| `light` | On/off lights | ⚠️ No — API-based only |
 | `switch` | Smart sockets and irrigation valves | ⚠️ No — API-based only |
 
 > **Note:** Only the `cover` platform has been tested with real hardware (Jarolift motors via Everhome CloudBox). The `binary_sensor`, `light`, and `switch` platforms are implemented based on the Everhome API documentation and have not been verified against physical devices. If you own Everhome-compatible sensors, lights, or sockets and can test them, please open an issue or pull request with feedback.
@@ -34,14 +34,17 @@ The integration has been tested and verified with:
 
 ## Features
 
-- **OAuth2 Authentication** - Secure connection to Everhome cloud
-- **Real-time Control** - Open, close, and stop shutter operations
-- **State Detection** - Intelligent state management with API limitations handling
-- **Universal Shutter Support** - Compatible with all Everhome shutter-type devices
-- **Multiple Device Categories** - Support for shutters, blinds, awnings, and curtains
-- **Always-Available Controls** - All buttons remain active regardless of state
-- **Position Feedback** - Position reporting when available from devices
-- **Reliable Operation** - Graceful handling of local remote usage and API outages
+- **OAuth2 Authentication** - Secure connection to Everhome cloud, with re-authentication when the login expires
+- **Cover Control** - Open, close, and stop shutters, blinds, curtains, awnings, and garage doors
+- **Always-Available Controls** - Open and close stay available even when everHome's state may be stale
+- **Error Reporting** - Commands everHome rejects show up as errors in the UI and automation traces
+- **Outage Handling** - Entities become unavailable while the everHome API can't be reached
+- **New Devices** - Devices added in everHome appear automatically on the next poll (every 5 minutes)
+
+## Requirements
+
+- Home Assistant 2026.10 or newer
+- An everHome account and an OAuth2 application (client ID and secret) created in the everHome developer portal
 
 ## Installation
 
@@ -91,32 +94,20 @@ This integration works with shutter-type devices from various manufacturers conn
 - **Jarolift** - TDEF series tubular motors, Smart WiFi motors, and 433 MHz radio systems
 - **Other brands** - Any shutter motor system compatible with the Everhome platform
 
-**Universal Shutter Features Supported:**
-- Manual remote control detection and state synchronization
-- Motor limit position handling for all compatible systems
-- Emergency stop functionality across all device types
-- Integration with manufacturer-specific protocols via Everhome
-
 ### Device Features
 
-Each device provides:
+Each cover provides:
 - **Open/Close Controls** - Basic shutter operation
-- **Stop Function** - Emergency stop capability
-- **Position Reporting** - Current position when available (0-100%)
-- **State Feedback** - Opening, closing, open, closed states
-- **Device Information** - Model, firmware version, manufacturer details
+- **Stop Function** - Stop a moving cover
+- **State Feedback** - Open or closed, as reported by everHome (`up`/`out` = open, `down`/`in` = closed)
 
 ## Known Limitations
 
 ### API Constraints
-- **No Intermediate Positions**: Everhome API doesn't provide percentage positions for most devices due to motor limitations
-- **Local Remote Interference**: Using physical remotes can cause temporary state sync issues as the cloud API doesn't receive these updates immediately
-- **Position Accuracy**: Some devices may report approximate positions rather than exact percentages
-
-### Workarounds Implemented
-- **Smart State Detection**: Uses explicit API states when available, falls back to position-based detection
-- **Motor Threshold Handling**: Treats positions ≤5% as closed and ≥95% as open to handle motor limitations
-- **Graceful Degradation**: Maintains control functionality even when state data is unavailable
+- **No Positions**: The [everHome API](https://everhome.cloud/en/developer/api) reports a cover's state only as up/down (or in/out, which this integration maps as out = open, in = closed), and its execute call takes nothing but an action key (this integration sends up, down and stop). Setting a position is not supported.
+- **No Dimming**: The API's execute call only takes an action key, so lights are on/off only.
+- **Stale State After Local Use**: everHome doesn't see a cover moved with a physical remote or wall switch, so its state (and the state shown in Home Assistant) can be wrong until the cover is moved through everHome again. A command everHome accepts may then not move the cover (see [#22](https://github.com/alexlenk/ha-everhome/issues/22)).
+- **Polling**: Device state is polled every 5 minutes, and right after each command.
 
 ## Usage Examples
 
@@ -142,22 +133,6 @@ automation:
         entity_id: cover.bedroom_shutter
 ```
 
-### Position-Based Control
-```yaml
-automation:
-  - alias: "Partial shade during hot days"
-    trigger:
-      platform: numeric_state
-      entity_id: sensor.outdoor_temperature
-      above: 30
-    action:
-      service: cover.set_cover_position
-      target:
-        entity_id: cover.living_room_awning
-      data:
-        position: 75  # 75% extended for shade
-```
-
 ## Troubleshooting
 
 ### Authentication Issues
@@ -172,7 +147,6 @@ automation:
 
 ### Connection Problems
 - **API Timeouts**: Check internet connectivity and Everhome service status
-- **Rate Limiting**: The integration respects API rate limits automatically
 - **Cloud Outages**: Integration will retry automatically when service resumes
 
 ### Debug Logging
@@ -188,7 +162,7 @@ logger:
 
 ## Contributing
 
-Contributions are welcome! Please read the [contributing guidelines](CONTRIBUTING.md) first.
+Contributions are welcome!
 
 ### Development Setup
 1. Fork this repository
@@ -207,7 +181,7 @@ Contributions are welcome! Please read the [contributing guidelines](CONTRIBUTIN
 ### Planned Features
 - **CI/CD Pipeline** - Automated testing and releases ✅ (Completed)
 - **Binary Sensors** - Door/window contacts, motion, smoke, water detectors ✅ (Completed, untested on hardware)
-- **Lights** - On/off and dimmable light control ✅ (Completed, untested on hardware)
+- **Lights** - On/off light control ✅ (Completed, untested on hardware)
 - **Switches** - Smart sockets and irrigation valves ✅ (Completed, untested on hardware)
 - **Climate** - Heating/cooling thermostat support
 - **Sensors** - Energy meters, solar inverters, environment sensors
