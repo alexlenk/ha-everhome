@@ -1,5 +1,34 @@
 # Changelog
 
+## [0.7.0](https://github.com/alexlenk/ha-everhome/compare/v0.6.4...v0.7.0) (2026-11-18)
+
+
+### ⚠ Breaking Changes
+
+* requires Home Assistant 2026.10 or newer ([#23](https://github.com/alexlenk/ha-everhome/issues/23))
+* covers no longer offer set position, and lights are on/off only: the everHome API's execute call only takes an action key, so the undocumented `position`, `capabilities`, `set_position` and `set_brightness` handling was removed ([#27](https://github.com/alexlenk/ha-everhome/issues/27))
+* commands everHome rejects (HTTP errors, connection errors) now raise an error in the service call / automation instead of failing silently ([#22](https://github.com/alexlenk/ha-everhome/issues/22))
+
+
+### Bug Fixes
+
+* re-authentication now completes and updates the existing entry; before, it aborted with "Unexpected error occurred" on current Home Assistant ([#24](https://github.com/alexlenk/ha-everhome/issues/24))
+* a 401 while polling now starts re-authentication ([#24](https://github.com/alexlenk/ha-everhome/issues/24))
+* entities become unavailable while the everHome API can't be reached instead of showing stale states ([#26](https://github.com/alexlenk/ha-everhome/issues/26))
+* awnings map `out` to open and `in` to closed ([#27](https://github.com/alexlenk/ha-everhome/issues/27))
+* devices marked `disabled` in everHome are skipped ([#27](https://github.com/alexlenk/ha-everhome/issues/27))
+* added messages for all OAuth abort reasons ([#28](https://github.com/alexlenk/ha-everhome/issues/28))
+* the auto-merge workflow only merges release PRs from this repository's `claude/release-*` branches ([#25](https://github.com/alexlenk/ha-everhome/issues/25))
+* GitHub Releases now contain the CHANGELOG section instead of generic text ([#32](https://github.com/alexlenk/ha-everhome/issues/32))
+
+
+### Improvements
+
+* devices added in everHome appear on the next poll without reloading the integration ([#30](https://github.com/alexlenk/ha-everhome/issues/30))
+* successful command responses are logged at debug level ([#22](https://github.com/alexlenk/ha-everhome/issues/22))
+* tests run against Home Assistant 2026.10 on Python 3.14 ([#23](https://github.com/alexlenk/ha-everhome/issues/23))
+* README, CLAUDE.md and docs match the documented everHome API ([#29](https://github.com/alexlenk/ha-everhome/issues/29))
+
 ## [0.6.4](https://github.com/alexlenk/ha-everhome/compare/v0.6.3...v0.6.4) (2026-03-29)
 
 
