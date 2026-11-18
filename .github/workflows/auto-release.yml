@@ -76,11 +76,10 @@ jobs:
           if [ -f CHANGELOG.md ]; then
             echo "📄 Found CHANGELOG.md, extracting notes for version $VERSION"
 
-            awk "/## \[$VERSION\]/,/^## \[/ {
-              if (/^## \[$VERSION\]/) next;
-              if (/^## \[/) exit;
-              print
-            }" CHANGELOG.md > "$NOTES_FILE"
+            # Print the lines after "## [$VERSION]" up to the next "## [" heading.
+            # (A range pattern doesn't work: the start line matches the end too.)
+            awk -v v="$VERSION" 'index($0, "## [" v "]") == 1 {f=1; next} f && /^## \[/ {exit} f {print}' \
+              CHANGELOG.md > "$NOTES_FILE"
 
             sed -i '/./,$!d' "$NOTES_FILE"
             sed -i -e :a -e '/^\s*$/d;N;ba' "$NOTES_FILE"
