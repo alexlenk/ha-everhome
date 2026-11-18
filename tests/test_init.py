@@ -1,315 +1,151 @@
-"""Test Everhome integration setup and unloading."""
+"""Tests for Everhome setup and unload."""
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, MagicMock, patch
+import time
+from http import HTTPStatus
 
-import aiohttp
 import pytest
+from aiohttp import ClientError
+from homeassistant.config_entries import SOURCE_REAUTH, ConfigEntryState
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
-
-from custom_components.everhome import async_setup_entry, async_unload_entry
-from custom_components.everhome.const import DOMAIN, PLATFORMS
-
-# Constants for long import paths
-OAUTH2_GET_IMPL = (
-    "homeassistant.helpers.config_entry_oauth2_flow."
-    "async_get_config_entry_implementation"
+from pytest_homeassistant_custom_component.common import MockConfigEntry
+from pytest_homeassistant_custom_component.test_util.aiohttp import (
+    AiohttpClientMocker,
 )
-OAUTH2_SESSION = "homeassistant.helpers.config_entry_oauth2_flow.OAuth2Session"
+
+from custom_components.everhome.const import DOMAIN
+
+from .conftest import DEVICE_URL, TOKEN_URL
 
 
-class TestEverhomeInit:
-    """Test Everhome integration initialization."""
+async def test_setup_and_unload(
+    hass: HomeAssistant, setup_integration: MockConfigEntry
+) -> None:
+    """Entry loads, creates entities for supported enabled devices, and unloads."""
+    entry = setup_integration
+    assert entry.state is ConfigEntryState.LOADED
+    assert entry.runtime_data.data.keys() == {8, 9, 10, 20, 30, 40}
 
-    async def test_setup_entry_success(
-        self,
-        hass: HomeAssistant,
-        mock_config_entry,
-        mock_everhome_api,
-        mock_devices_response,
-    ):
-        """Test successful setup of config entry."""
-        mock_config_entry.add_to_hass(hass)
+    # Unsupported (speaker) and disabled devices get no entities
+    entity_ids = hass.states.async_entity_ids()
+    assert "cover.disabled_shutter" not in entity_ids
+    assert not any("unsupported" in entity_id for entity_id in entity_ids)
+    assert len(entity_ids) == 6
 
-        # Mock OAuth components
-        mock_implementation = AsyncMock()
-        mock_session = AsyncMock()
-        mock_auth = AsyncMock()
-        mock_auth.async_get_access_token.return_value = "test_token"
+    assert await hass.config_entries.async_unload(entry.entry_id)
+    await hass.async_block_till_done()
+    assert entry.state is ConfigEntryState.NOT_LOADED
 
-        # Mock coordinator
-        mock_coordinator = AsyncMock()
-        mock_coordinator.async_config_entry_first_refresh.return_value = None
 
-        with (
-            patch(OAUTH2_GET_IMPL) as mock_get_impl,
-            patch(OAUTH2_SESSION) as mock_oauth_session,
-            patch("custom_components.everhome.EverhomeAuth") as mock_auth_class,
-            patch(
-                "custom_components.everhome.EverhomeDataUpdateCoordinator"
-            ) as mock_coordinator_class,
-            patch.object(
-                hass.config_entries, "async_forward_entry_setups"
-            ) as mock_forward_setups,
-        ):
+@pytest.mark.parametrize(
+    "mock_kwargs",
+    [
+        {"status": HTTPStatus.INTERNAL_SERVER_ERROR},
+        {"exc": ClientError()},
+        {"exc": TimeoutError()},
+    ],
+)
+async def test_setup_retry_on_api_error(
+    hass: HomeAssistant,
+    application_credentials: None,
+    mock_config_entry: MockConfigEntry,
+    aioclient_mock: AiohttpClientMocker,
+    mock_kwargs: dict,
+) -> None:
+    """API errors during the first refresh retry setup later."""
+    aioclient_mock.get(DEVICE_URL, **mock_kwargs)
+    mock_config_entry.add_to_hass(hass)
 
-            mock_get_impl.return_value = mock_implementation
-            mock_oauth_session.return_value = mock_session
-            mock_auth_class.return_value = mock_auth
-            mock_coordinator_class.return_value = mock_coordinator
-            mock_forward_setups.return_value = True
+    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
 
-            result = await async_setup_entry(hass, mock_config_entry)
+    assert mock_config_entry.state is ConfigEntryState.SETUP_RETRY
 
-            assert result is True
-            assert DOMAIN in hass.data
-            assert mock_config_entry.entry_id in hass.data[DOMAIN]
-            assert hass.data[DOMAIN][mock_config_entry.entry_id] == mock_coordinator
 
-            # Verify coordinator was set up
-            mock_coordinator.async_config_entry_first_refresh.assert_called_once()
-            mock_forward_setups.assert_called_once_with(mock_config_entry, PLATFORMS)
+async def test_setup_unauthorized_starts_reauth(
+    hass: HomeAssistant,
+    application_credentials: None,
+    mock_config_entry: MockConfigEntry,
+    aioclient_mock: AiohttpClientMocker,
+) -> None:
+    """A 401 from GET /device fails setup with an auth error and starts reauth."""
+    aioclient_mock.get(DEVICE_URL, status=HTTPStatus.UNAUTHORIZED)
+    mock_config_entry.add_to_hass(hass)
 
-    async def test_setup_entry_auth_failed(
-        self,
-        hass: HomeAssistant,
-        mock_config_entry,
-    ):
-        """Test setup failure due to authentication error."""
-        mock_config_entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(mock_config_entry.entry_id)
+    await hass.async_block_till_done()
 
-        # Mock OAuth components
-        mock_implementation = AsyncMock()
-        mock_session = AsyncMock()
-        mock_auth = AsyncMock()
+    assert mock_config_entry.state is ConfigEntryState.SETUP_ERROR
+    flows = hass.config_entries.flow.async_progress()
+    assert [flow["context"]["source"] for flow in flows] == [SOURCE_REAUTH]
 
-        # Mock 401 authentication error
-        auth_error = aiohttp.ClientResponseError(
-            request_info=MagicMock(),
-            history=(),
-            status=401,
-            message="Unauthorized",
-        )
-        mock_auth.async_get_access_token.side_effect = auth_error
 
-        with (
-            patch(OAUTH2_GET_IMPL) as mock_get_impl,
-            patch(OAUTH2_SESSION) as mock_oauth_session,
-            patch("custom_components.everhome.EverhomeAuth") as mock_auth_class,
-        ):
+async def test_setup_refresh_token_rejected_starts_reauth(
+    hass: HomeAssistant,
+    application_credentials: None,
+    aioclient_mock: AiohttpClientMocker,
+) -> None:
+    """An expired token whose refresh is rejected starts reauth."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={
+            "auth_implementation": DOMAIN,
+            "token": {
+                "access_token": "old",
+                "refresh_token": "revoked",
+                "token_type": "Bearer",
+                "expires_in": 3600,
+                "expires_at": time.time() - 60,
+            },
+        },
+    )
+    aioclient_mock.post(TOKEN_URL, status=HTTPStatus.BAD_REQUEST)
+    entry.add_to_hass(hass)
 
-            mock_get_impl.return_value = mock_implementation
-            mock_oauth_session.return_value = mock_session
-            mock_auth_class.return_value = mock_auth
+    await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
 
-            with pytest.raises(ConfigEntryAuthFailed):
-                await async_setup_entry(hass, mock_config_entry)
+    assert entry.state is ConfigEntryState.SETUP_ERROR
+    flows = hass.config_entries.flow.async_progress()
+    assert [flow["context"]["source"] for flow in flows] == [SOURCE_REAUTH]
 
-    async def test_setup_entry_not_ready_client_response_error(
-        self,
-        hass: HomeAssistant,
-        mock_config_entry,
-    ):
-        """Test setup failure due to server error."""
-        mock_config_entry.add_to_hass(hass)
 
-        # Mock OAuth components
-        mock_implementation = AsyncMock()
-        mock_session = AsyncMock()
-        mock_auth = AsyncMock()
+async def test_setup_refreshes_expired_token(
+    hass: HomeAssistant,
+    application_credentials: None,
+    aioclient_mock: AiohttpClientMocker,
+) -> None:
+    """An expired token is refreshed and the new one is stored and used."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        data={
+            "auth_implementation": DOMAIN,
+            "token": {
+                "access_token": "old",
+                "refresh_token": "refresh",
+                "token_type": "Bearer",
+                "expires_in": 3600,
+                "expires_at": time.time() - 60,
+            },
+        },
+    )
+    aioclient_mock.post(
+        TOKEN_URL,
+        json={
+            "access_token": "new",
+            "refresh_token": "refresh2",
+            "token_type": "Bearer",
+            "expires_in": 3600,
+        },
+    )
+    aioclient_mock.get(DEVICE_URL, json=[])
+    entry.add_to_hass(hass)
 
-        # Mock 500 server error
-        server_error = aiohttp.ClientResponseError(
-            request_info=MagicMock(),
-            history=(),
-            status=500,
-            message="Internal Server Error",
-        )
-        mock_auth.async_get_access_token.side_effect = server_error
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
 
-        with (
-            patch(OAUTH2_GET_IMPL) as mock_get_impl,
-            patch(OAUTH2_SESSION) as mock_oauth_session,
-            patch("custom_components.everhome.EverhomeAuth") as mock_auth_class,
-        ):
-
-            mock_get_impl.return_value = mock_implementation
-            mock_oauth_session.return_value = mock_session
-            mock_auth_class.return_value = mock_auth
-
-            with pytest.raises(ConfigEntryNotReady):
-                await async_setup_entry(hass, mock_config_entry)
-
-    async def test_setup_entry_not_ready_client_error(
-        self,
-        hass: HomeAssistant,
-        mock_config_entry,
-    ):
-        """Test setup failure due to client error."""
-        mock_config_entry.add_to_hass(hass)
-
-        # Mock OAuth components
-        mock_implementation = AsyncMock()
-        mock_session = AsyncMock()
-        mock_auth = AsyncMock()
-
-        # Mock client connection error
-        client_error = aiohttp.ClientError("Connection failed")
-        mock_auth.async_get_access_token.side_effect = client_error
-
-        with (
-            patch(OAUTH2_GET_IMPL) as mock_get_impl,
-            patch(OAUTH2_SESSION) as mock_oauth_session,
-            patch("custom_components.everhome.EverhomeAuth") as mock_auth_class,
-        ):
-
-            mock_get_impl.return_value = mock_implementation
-            mock_oauth_session.return_value = mock_session
-            mock_auth_class.return_value = mock_auth
-
-            with pytest.raises(ConfigEntryNotReady):
-                await async_setup_entry(hass, mock_config_entry)
-
-    async def test_setup_entry_coordinator_refresh_failure(
-        self,
-        hass: HomeAssistant,
-        mock_config_entry,
-    ):
-        """Test setup failure due to coordinator refresh error."""
-        mock_config_entry.add_to_hass(hass)
-
-        # Mock OAuth components
-        mock_implementation = AsyncMock()
-        mock_session = AsyncMock()
-        mock_auth = AsyncMock()
-        mock_auth.async_get_access_token.return_value = "test_token"
-
-        # Mock coordinator that fails on first refresh
-        mock_coordinator = AsyncMock()
-        mock_coordinator.async_config_entry_first_refresh.side_effect = Exception(
-            "Refresh failed"
-        )
-
-        with (
-            patch(OAUTH2_GET_IMPL) as mock_get_impl,
-            patch(OAUTH2_SESSION) as mock_oauth_session,
-            patch("custom_components.everhome.EverhomeAuth") as mock_auth_class,
-            patch(
-                "custom_components.everhome.EverhomeDataUpdateCoordinator"
-            ) as mock_coordinator_class,
-        ):
-
-            mock_get_impl.return_value = mock_implementation
-            mock_oauth_session.return_value = mock_session
-            mock_auth_class.return_value = mock_auth
-            mock_coordinator_class.return_value = mock_coordinator
-
-            with pytest.raises(Exception, match="Refresh failed"):
-                await async_setup_entry(hass, mock_config_entry)
-
-    async def test_unload_entry_success(
-        self,
-        hass: HomeAssistant,
-        mock_config_entry,
-    ):
-        """Test successful unloading of config entry."""
-        # Set up initial data
-        hass.data.setdefault(DOMAIN, {})
-        mock_coordinator = AsyncMock()
-        hass.data[DOMAIN][mock_config_entry.entry_id] = mock_coordinator
-
-        with patch.object(
-            hass.config_entries, "async_unload_platforms"
-        ) as mock_unload_platforms:
-            mock_unload_platforms.return_value = True
-
-            result = await async_unload_entry(hass, mock_config_entry)
-
-            assert result is True
-            assert mock_config_entry.entry_id not in hass.data[DOMAIN]
-            mock_unload_platforms.assert_called_once_with(mock_config_entry, PLATFORMS)
-
-    async def test_unload_entry_failure(
-        self,
-        hass: HomeAssistant,
-        mock_config_entry,
-    ):
-        """Test failed unloading of config entry."""
-        # Set up initial data
-        hass.data.setdefault(DOMAIN, {})
-        mock_coordinator = AsyncMock()
-        hass.data[DOMAIN][mock_config_entry.entry_id] = mock_coordinator
-
-        with patch.object(
-            hass.config_entries, "async_unload_platforms"
-        ) as mock_unload_platforms:
-            mock_unload_platforms.return_value = False
-
-            result = await async_unload_entry(hass, mock_config_entry)
-
-            assert result is False
-            # Data should still be there on failed unload
-            assert mock_config_entry.entry_id in hass.data[DOMAIN]
-            mock_unload_platforms.assert_called_once_with(mock_config_entry, PLATFORMS)
-
-    async def test_unload_entry_no_data(
-        self,
-        hass: HomeAssistant,
-        mock_config_entry,
-    ):
-        """Test unloading when no data exists."""
-        # Don't set up any data
-
-        with patch.object(
-            hass.config_entries, "async_unload_platforms"
-        ) as mock_unload_platforms:
-            mock_unload_platforms.return_value = True
-
-            result = await async_unload_entry(hass, mock_config_entry)
-
-            assert result is True
-            # Should handle KeyError gracefully
-            mock_unload_platforms.assert_called_once_with(mock_config_entry, PLATFORMS)
-
-    async def test_setup_entry_data_structure(
-        self,
-        hass: HomeAssistant,
-        mock_config_entry,
-    ):
-        """Test that setup creates proper data structure."""
-        # Initially no DOMAIN data
-        assert DOMAIN not in hass.data
-
-        mock_config_entry.add_to_hass(hass)
-
-        # Mock all dependencies
-        mock_implementation = AsyncMock()
-        mock_session = AsyncMock()
-        mock_auth = AsyncMock()
-        mock_auth.async_get_access_token.return_value = "test_token"
-        mock_coordinator = AsyncMock()
-        mock_coordinator.async_config_entry_first_refresh.return_value = None
-
-        with (
-            patch(OAUTH2_GET_IMPL) as mock_get_impl,
-            patch(OAUTH2_SESSION) as mock_oauth_session,
-            patch("custom_components.everhome.EverhomeAuth") as mock_auth_class,
-            patch(
-                "custom_components.everhome.EverhomeDataUpdateCoordinator"
-            ) as mock_coordinator_class,
-            patch.object(hass.config_entries, "async_forward_entry_setups"),
-        ):
-
-            mock_get_impl.return_value = mock_implementation
-            mock_oauth_session.return_value = mock_session
-            mock_auth_class.return_value = mock_auth
-            mock_coordinator_class.return_value = mock_coordinator
-
-            await async_setup_entry(hass, mock_config_entry)
-
-            # Verify data structure
-            assert DOMAIN in hass.data
-            assert isinstance(hass.data[DOMAIN], dict)
-            assert mock_config_entry.entry_id in hass.data[DOMAIN]
+    assert entry.state is ConfigEntryState.LOADED
+    assert entry.data["token"]["access_token"] == "new"
+    device_call = next(c for c in aioclient_mock.mock_calls if str(c[1]) == DEVICE_URL)
+    assert device_call[3]["Authorization"] == "Bearer new"

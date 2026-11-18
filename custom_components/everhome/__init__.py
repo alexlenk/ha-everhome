@@ -1,58 +1,37 @@
 """The Everhome integration."""
 
-import logging
+from __future__ import annotations
 
-import aiohttp
-from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers import config_entry_oauth2_flow
 
 from .api import EverhomeAuth
-from .const import DOMAIN, PLATFORMS
-from .coordinator import EverhomeDataUpdateCoordinator
-
-_LOGGER = logging.getLogger(__name__)
+from .const import PLATFORMS
+from .coordinator import EverhomeConfigEntry, EverhomeDataUpdateCoordinator
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: EverhomeConfigEntry) -> bool:
     """Set up Everhome from a config entry."""
-    hass.data.setdefault(DOMAIN, {})
-
     implementation = (
         await config_entry_oauth2_flow.async_get_config_entry_implementation(
             hass, entry
         )
     )
-
     session = config_entry_oauth2_flow.OAuth2Session(hass, entry, implementation)
-    auth = EverhomeAuth(hass, session)
+    coordinator = EverhomeDataUpdateCoordinator(
+        hass, EverhomeAuth(hass, session), entry
+    )
 
-    try:
-        await auth.async_get_access_token()
-    except aiohttp.ClientResponseError as err:
-        if 400 <= err.status < 500:
-            raise ConfigEntryAuthFailed from err
-        raise ConfigEntryNotReady from err
-    except aiohttp.ClientError as err:
-        raise ConfigEntryNotReady from err
-
-    coordinator = EverhomeDataUpdateCoordinator(hass, auth, entry)
-
+    # Token refresh failures raised here are already classified by Home
+    # Assistant (OAuth2TokenRequestReauthError starts reauth, transient ones
+    # retry setup), so no extra handling is needed.
     await coordinator.async_config_entry_first_refresh()
 
-    hass.data[DOMAIN][entry.entry_id] = coordinator
-
+    entry.runtime_data = coordinator
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
-
     return True
 
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_unload_entry(hass: HomeAssistant, entry: EverhomeConfigEntry) -> bool:
     """Unload a config entry."""
-    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-
-    if unload_ok and DOMAIN in hass.data:
-        hass.data[DOMAIN].pop(entry.entry_id, None)
-
-    return bool(unload_ok)
+    return bool(await hass.config_entries.async_unload_platforms(entry, PLATFORMS))
